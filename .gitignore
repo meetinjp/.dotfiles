@@ -1,0 +1,26 @@
+# Claude Code per-directory local state (auto-generated, machine-specific).
+# Leading slash anchors to the repo root, so a future `claude/` package
+# with a nested `claude/.claude/` is unaffected.
+/.claude/
+
+# Editor swap/backup files
+*.swp
+*.swo
+*.bak
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Per-host overrides (sourced by zshrc; kept out of repo on purpose).
+# No wildcard — bin/.local/ is a legit stow path mirroring ~/.local/bin.
+.zshrc.local
+.envrc.local
+.envrc
+
+# Rendered configs (built by setup.sh from *.template files) — they
+# contain personal identity (git emails) so they must never land in the
+# public repo.
+git/.gitconfig
+git/.gitconfig-work
