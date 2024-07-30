@@ -1,0 +1,15 @@
+CompileFlags:
+  Add:
+    [
+      -ggdb,
+      -pedantic-errors,
+      -Wall,
+      -Weffc++,
+      -Wextra,
+      -Wconversion,
+      -Wsign-conversion,
+      -Werror,
+      -Wshadow,
+      -std=c++23,
+    ]
+  Compiler: g++

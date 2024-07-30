@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+DOTFILES="$(dirname "${BASH_SOURCE[0]}")"
+STOW_DIRS="nvim clangd i3 zsh alacritty xmodmap"
+
+pushd "$DOTFILES" >/dev/null
+
+for dir in $STOW_DIRS; do
+	stow -D "$dir"
+	stow "$dir"
+done
+
+popd >/dev/null
