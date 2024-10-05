@@ -24,12 +24,5 @@ esac
 # pnpm end
 
 alias vim="nvim"
-alias v="nvim ."
 
-alias vd="cd ~/.dotfiles && nvim ."
-alias vz="cd && nvim .zshrc"
-alias vi="cd ~/.config/i3 && nvim ."
-alias vo="cd ~/obsidian-vault && nvim ."
-alias vn="cd ~/.config/nvim && nvim ."
-
-export GIT_EDITOR="vim"
+export GIT_EDITOR="vi"
