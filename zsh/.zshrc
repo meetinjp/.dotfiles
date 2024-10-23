@@ -25,4 +25,4 @@ esac
 
 alias vim="nvim"
 
-export GIT_EDITOR="vi"
+export GIT_EDITOR="nvim"
