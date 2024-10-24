@@ -1,29 +1,68 @@
 # .dotfiles
 
-## Prerequisites
-
-- [FiraCode Nerd Font](https://www.nerdfonts.com/font-downloads)
-- [`g++ 14+`](https://archlinux.org/packages/core/x86_64/gcc/)
-- [Neovim v0.10.1+](https://archlinux.org/packages/extra/x86_64/neovim/)
-- [`xclip`](https://archlinux.org/packages/extra/x86_64/xclip/)
-- [`ripgrep`](https://archlinux.org/packages/extra/x86_64/ripgrep/)
-- [`gdb 14.2+`](https://archlinux.org/packages/extra/x86_64/gdb/)
-- [Node](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-- [Python](https://archlinux.org/packages/core/x86_64/python/)
-  - [venv](https://docs.python.org/3/library/venv.html)
-- [`unzip`](https://archlinux.org/packages/extra/x86_64/unzip/)
-
 ## Getting Started
 
+1. Install the prerequisites:
+   ```
+   git \
+   firefox \
+   stow \
+   zsh zsh-syntax-highlighting \
+   neovim ripgrep xclip gcc gdb \
+   pavucontrol \
+   obsidian \
+   xorg-xmodmap \
+   unzip
+   ```
+   - [FiraCode Nerd Font](https://www.nerdfonts.com/font-downloads)
+   - [Oh My Zsh](https://ohmyz.sh/#install)
+   - [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
+   - [Python](https://archlinux.org/packages/core/x86_64/python/)
+     - [venv](https://docs.python.org/3/library/venv.html)
 1. Clone this repo _recursively_ into your home directory:
-   ```sh
+   ```
    git clone --recursive git@github.com:meetinjp/.dotfiles ~/.dotfiles
    ```
-2. Run the `install.sh` script:
-   ```sh
+1. Run the `install.sh` script:
+   ```
    ~/.dotfiles/install.sh
    ```
 
-## Troubleshooting
+### Troubleshooting
 
-- `existing target is not owned by stow`: `unlink` or `rm` the given target and run the installation script again.
+- "existing target is not owned by stow": `unlink` or `rm` the given target and run the installation script again.
+
+## Extra Configuration
+
+### Touchpad Synaptics
+
+```ini
+libinput
+
+# When there are no configuration files in /etc/X11/xorg.conf.d, do:
+ln -s /usr/share/X11/xorg.conf.d/40-libinput.conf /etc/X11/xorg.conf.d/40-libinput.conf
+
+# /etc/X11/xorg.conf.d/40-libinput.conf
+Option "Tapping" "on"
+Option "NaturalScrolling" "true"
+```
+
+### Switching between GPU modes on Nvidia Optimus systems
+
+```
+envycontrol
+
+envycontrol -s integrated
+```
+
+### Bluetooth
+
+```
+bluez bluez-utils
+
+systemctl enable bluetooth.service && systemctl start bluetooth.service
+```
+
+## TODOs
+
+- [ ] [Backlight](https://wiki.archlinux.org/title/Backlight) (currently using `light`)

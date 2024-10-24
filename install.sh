@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DOTFILES="$(dirname "${BASH_SOURCE[0]}")"
-STOW_DIRS="nvim clangd i3 zsh alacritty xmodmap"
+STOW_DIRS="nvim i3 zsh alacritty xmodmap"
 
 pushd "$DOTFILES" >/dev/null
 

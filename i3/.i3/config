@@ -154,6 +154,6 @@ default_border none
 workspace_layout tabbed
 
 # It looks like everything has to be in one command for it to execute sequentially
-exec --no-startup-id "i3-msg 'workspace 1; append_layout ~/.i3/workspace-1.json; exec alacritty; workspace 2; append_layout ~/.i3/workspace-2.json; exec firefox; workspace 3; append_layout ~/.i3/workspace-3.json; exec md.obsidian.Obsidian; workspace 2'"
+exec --no-startup-id "i3-msg 'workspace 1; append_layout ~/.i3/workspace-1.json; exec alacritty; workspace 2; append_layout ~/.i3/workspace-2.json; exec firefox; workspace 3; append_layout ~/.i3/workspace-3.json; exec obsidian; workspace 2'"
 
-exec_always --no-startup-id "setxkbmap -layout 'pl,gr' -variant ',polytonic'; setxkbmap -option 'grp:win_space_toggle'; xmodmap ~/.Xmodmap"
+exec_always --no-startup-id "setxkbmap -layout 'pl'; xmodmap ~/.Xmodmap"
