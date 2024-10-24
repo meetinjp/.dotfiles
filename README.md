@@ -47,7 +47,7 @@ Option "Tapping" "on"
 Option "NaturalScrolling" "true"
 ```
 
-### Switching between GPU modes on Nvidia Optimus systems
+### Switching Between GPU Modes on Nvidia Optimus Systems
 
 ```
 envycontrol
@@ -61,6 +61,13 @@ envycontrol -s integrated
 bluez bluez-utils
 
 systemctl enable bluetooth.service && systemctl start bluetooth.service
+```
+
+### Git
+
+```
+git config --global user.email "meetinjp@proton.me"
+git config --global user.name "meetinjp"
 ```
 
 ## TODOs
