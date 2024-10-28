@@ -5,7 +5,7 @@ CASE_SENSITIVE="true"
 
 zstyle ':omz:update' mode reminder
 
-plugins=(git vi-mode)
+plugins=(git vi-mode zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -13,13 +13,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
 
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
 # pnpm
 export PNPM_HOME="~/.local/share/pnpm"
 case ":$PATH:" in
-*":$PNPM_HOME:"*) ;;
-*) export PATH="$PNPM_HOME:$PATH" ;;
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
 

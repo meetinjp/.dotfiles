@@ -21,8 +21,7 @@
 			"swallows": [
 				{
 					"class": "^Alacritty$",
-					"instance": "^Alacritty$",
-					"machine": "^archlinux$"
+					"instance": "^Alacritty$"
 				}
 			],
 			"type": "con"

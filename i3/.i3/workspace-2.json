@@ -22,7 +22,6 @@
 				{
 					"class": "^firefox$",
 					"instance": "^Navigator$",
-					"machine": "^archlinux$",
 					"window_role": "^browser$"
 				}
 			],

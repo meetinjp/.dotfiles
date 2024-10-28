@@ -7,18 +7,14 @@
    git \
    firefox \
    stow \
-   zsh zsh-syntax-highlighting \
+   curl \
    neovim ripgrep xclip gcc gdb \
    pavucontrol \
-   obsidian \
-   xorg-xmodmap \
-   unzip
+   unzip \
+   python3 python3-venv \
+   xorg-xmodmap
    ```
-   - [FiraCode Nerd Font](https://www.nerdfonts.com/font-downloads)
-   - [Oh My Zsh](https://ohmyz.sh/#install)
    - [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-   - [Python](https://archlinux.org/packages/core/x86_64/python/)
-     - [venv](https://docs.python.org/3/library/venv.html)
 1. Clone this repo _recursively_ into your home directory:
    ```
    git clone --recursive git@github.com:meetinjp/.dotfiles ~/.dotfiles
@@ -27,6 +23,15 @@
    ```
    ~/.dotfiles/install.sh
    ```
+1. Install the postrequisites:
+   ```
+   zsh \
+   neovim
+   ```
+   - [FiraCode Nerd Font](https://www.nerdfonts.com/font-downloads)
+   - [Alacritty](https://github.com/alacritty/alacritty/blob/master/INSTALL.md)
+   - [Oh My Zsh](https://ohmyz.sh/#install)
+   - [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md#oh-my-zsh)
 
 ### Troubleshooting
 
