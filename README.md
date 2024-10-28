@@ -37,12 +37,9 @@
 ### Touchpad Synaptics
 
 ```ini
-libinput
+xf86-input-libinput
 
-# When there are no configuration files in /etc/X11/xorg.conf.d, do:
-ln -s /usr/share/X11/xorg.conf.d/40-libinput.conf /etc/X11/xorg.conf.d/40-libinput.conf
-
-# /etc/X11/xorg.conf.d/40-libinput.conf
+# /usr/share/X11/xorg.conf.d/40-libinput.conf
 Option "Tapping" "on"
 Option "NaturalScrolling" "true"
 ```
