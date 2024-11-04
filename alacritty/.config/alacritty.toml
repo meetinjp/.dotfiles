@@ -16,3 +16,11 @@ style = "Italic"
 [font.bold_italic]
 family = "FiraCode Nerd Font"
 style = "Bold Italic"
+
+[keyboard]
+bindings = [
+  { key = "Enter", mods = "Control|Shift", command = { program = "/bin/bash", args = [
+    "-c",
+    "~/.dotfiles/alacritty/spawn-alacritty-cwd.sh",
+  ] } },
+]

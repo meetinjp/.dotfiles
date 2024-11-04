@@ -16,11 +16,20 @@ export NVM_DIR="$HOME/.nvm"
 # pnpm
 export PNPM_HOME="~/.local/share/pnpm"
 case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+*":$PNPM_HOME:"*) ;;
+*) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
 
 alias vim="nvim"
 
 export GIT_EDITOR="nvim"
+
+export PATH="$PATH:/opt/mssql-tools/bin"
+export PATH="$PATH:$HOME/.cargo/bin"
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
