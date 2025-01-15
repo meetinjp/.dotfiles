@@ -22,6 +22,7 @@ esac
 # pnpm end
 
 alias vim="nvim"
+alias v="nvim ."
 
 export GIT_EDITOR="nvim"
 
@@ -33,3 +34,4 @@ export PATH="$PATH:$HOME/.cargo/bin"
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+

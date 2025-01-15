@@ -1,5 +1,5 @@
 [font]
-size = 16
+size = 14
 
 [font.normal]
 family = "FiraCode Nerd Font"
@@ -21,6 +21,6 @@ style = "Bold Italic"
 bindings = [
   { key = "Enter", mods = "Control|Shift", command = { program = "/bin/bash", args = [
     "-c",
-    "~/.dotfiles/alacritty/spawn-alacritty-cwd.sh",
+    "~/.dotfiles/spawn-alacritty-cwd.sh",
   ] } },
 ]
