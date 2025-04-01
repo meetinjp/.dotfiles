@@ -68,8 +68,13 @@ systemctl enable bluetooth.service && systemctl start bluetooth.service
 ### Git
 
 ```
-git config --global user.email "meetinjp@proton.me"
-git config --global user.name "meetinjp"
+[user]
+	email = meetinjp@proton.me
+	name = meetinjp
+[commit]
+	gpgsign = true
+[tag]
+	gpgSign = true
 ```
 
 ## TODOs
