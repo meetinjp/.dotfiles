@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DOTFILES="$(dirname "${BASH_SOURCE[0]}")"
-STOW_DIRS="nvim i3 zsh alacritty xmodmap"
+STOW_DIRS="hyprland kitty nvim tofi waybar zsh"
 
 pushd "$DOTFILES" >/dev/null
 

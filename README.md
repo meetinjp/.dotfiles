@@ -4,17 +4,9 @@
 
 1. Install the prerequisites:
    ```
-   git \
-   firefox \
-   stow \
-   curl \
-   neovim ripgrep xclip gcc gdb \
-   pavucontrol \
-   unzip \
-   python3 python3-venv \
-   xorg-xmodmap
+   git firefox stow curl neovim ripgrep wl-clipboard gcc gdb pavucontrol unzip python3 keyd brightnessctl yazi
    ```
-   - [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
+   - [Node Version Manager](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
 1. Clone this repo _recursively_ into your home directory:
    ```
    git clone --recursive git@github.com:meetinjp/.dotfiles ~/.dotfiles
@@ -24,14 +16,11 @@
    ~/.dotfiles/install.sh
    ```
 1. Install the postrequisites:
-   ```
-   zsh \
-   neovim
-   ```
-   - [FiraCode Nerd Font](https://www.nerdfonts.com/font-downloads)
-   - [Alacritty](https://github.com/alacritty/alacritty/blob/master/INSTALL.md)
+   - `zsh`
    - [Oh My Zsh](https://ohmyz.sh/#install)
    - [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md#oh-my-zsh)
+   - `neovim`
+   - [FiraCode](https://github.com/tonsky/FiraCode)
 
 ### Troubleshooting
 
@@ -39,44 +28,29 @@
 
 ## Extra Configuration
 
-### Touchpad Synaptics
-
-```ini
-xf86-input-libinput
-
-# /usr/share/X11/xorg.conf.d/40-libinput.conf
-Option "Tapping" "on"
-Option "NaturalScrolling" "true"
-```
-
 ### Switching Between GPU Modes on Nvidia Optimus Systems
 
-```
-envycontrol
-
-envycontrol -s integrated
-```
+- [EnvyControl](https://github.com/bayasdev/envycontrol?tab=readme-ov-file#%EF%B8%8F-getting-envycontrol)
 
 ### Bluetooth
 
-```
-bluez bluez-utils
+1. Install the following packages:
+   ```
+   bluez bluez-utils
+   ```
+2. Enable and start the Bluetooth service:
+   ```
+   systemctl enable bluetooth.service && systemctl start bluetooth.service
+   ```
 
-systemctl enable bluetooth.service && systemctl start bluetooth.service
-```
-
-### Git
+### `.gitconfig`
 
 ```
 [user]
-	email = meetinjp@proton.me
-	name = meetinjp
+email = meetinjp@proton.me
+name = meetinjp
 [commit]
-	gpgsign = true
+gpgsign = true
 [tag]
-	gpgSign = true
+gpgSign = true
 ```
-
-## TODOs
-
-- [ ] [Backlight](https://wiki.archlinux.org/title/Backlight) (currently using `light`)
