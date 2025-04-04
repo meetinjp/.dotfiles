@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
 DOTFILES="$(dirname "${BASH_SOURCE[0]}")"
-STOW_DIRS="hyprland kitty nvim tofi waybar zsh"
+STOW_DIRS="git hyprland kitty nvim tofi waybar zsh"
+
+echo "Installing dotfiles..."
 
 pushd "$DOTFILES" >/dev/null
 
@@ -11,3 +13,5 @@ for dir in $STOW_DIRS; do
 done
 
 popd >/dev/null
+
+echo "Dotfiles installed successfully!"
