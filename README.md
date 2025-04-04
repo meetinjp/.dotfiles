@@ -6,7 +6,6 @@
    ```
    git firefox stow curl neovim ripgrep wl-clipboard gcc gdb pavucontrol unzip python3 keyd brightnessctl yazi
    ```
-   - [Node Version Manager](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
 1. Clone this repo _recursively_ into your home directory:
    ```
    git clone --recursive git@github.com:meetinjp/.dotfiles ~/.dotfiles
@@ -15,10 +14,15 @@
    ```
    ~/.dotfiles/install.sh
    ```
+1. After the installation is complete, run the `setup.sh` script:
+   ```
+   ~/.dotfiles/setup.sh
+   ```
 1. Install the postrequisites:
    - `zsh`
    - [Oh My Zsh](https://ohmyz.sh/#install)
    - [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md#oh-my-zsh)
+   - [Node Version Manager](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
    - `neovim`
    - [FiraCode](https://github.com/tonsky/FiraCode)
 
@@ -42,15 +46,3 @@
    ```
    systemctl enable bluetooth.service && systemctl start bluetooth.service
    ```
-
-### `.gitconfig`
-
-```
-[user]
-email = meetinjp@proton.me
-name = meetinjp
-[commit]
-gpgsign = true
-[tag]
-gpgSign = true
-```
