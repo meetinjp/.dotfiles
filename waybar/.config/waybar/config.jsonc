@@ -12,7 +12,7 @@
     "hyprland/scratchpad",
     "custom/media",
   ],
-  "modules-center": ["hyprland/window"],
+  "modules-center": [],
   "modules-right": [
     "mpd",
     // "idle_inhibitor",

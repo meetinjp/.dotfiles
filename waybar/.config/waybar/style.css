@@ -5,7 +5,9 @@
 }
 
 window#waybar {
-	background-color: rgba(43, 48, 59, 0.5);
+	/* background-color: rgba(43, 48, 59, 0.5); */
+	background-color: #1d1f21;
+
 	border-bottom: 3px solid rgba(100, 114, 125, 0.5);
 	color: #ffffff;
 	transition-property: background-color;
@@ -34,6 +36,15 @@ window#waybar.chromium {
 	border: none;
 }
 
+tooltip {
+	background: #333333;
+	border: 1px solid #268bd2;
+}
+
+tooltip label {
+	color: white;
+}
+
 button {
 	/* Use box-shadow instead of border so the text isn't offset */
 	box-shadow: inset 0 -3px transparent;
@@ -45,7 +56,7 @@ button {
 /* https://github.com/Alexays/Waybar/wiki/FAQ#the-workspace-buttons-have-a-strange-hover-effect */
 button:hover {
 	background: inherit;
-	box-shadow: inset 0 -3px #ffffff;
+	box-shadow: inset 0 -3px #333333;
 }
 
 /* you can set a style on hover for any module like this */
@@ -55,17 +66,22 @@ button:hover {
 
 #workspaces button {
 	padding: 0 5px;
-	background-color: transparent;
 	color: #ffffff;
+	background-color: transparent;
+}
+
+#workspaces button.focused {
+	background: #333333;
+	border-bottom: 2px solid #268bd2;
+}
+
+#workspaces button.active {
+	background-color: #333333;
+	box-shadow: inset 0 -3px #268bd2;
 }
 
 #workspaces button:hover {
 	background: rgba(0, 0, 0, 0.2);
-}
-
-#workspaces button.active {
-	background-color: #64727D;
-	box-shadow: inset 0 -3px #ffffff;
 }
 
 #workspaces button.urgent {
@@ -73,7 +89,7 @@ button:hover {
 }
 
 #mode {
-	background-color: #64727D;
+	background-color: #333333;
 	box-shadow: inset 0 -3px #ffffff;
 }
 
@@ -114,7 +130,7 @@ button:hover {
 }
 
 #clock {
-	background-color: #64727D;
+	background-color: #333333;
 }
 
 /* #battery { */
