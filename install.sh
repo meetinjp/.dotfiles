@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DOTFILES="$(dirname "${BASH_SOURCE[0]}")"
-STOW_DIRS="hyprland kitty nvim tofi waybar zsh"
+STOW_DIRS="hyprland kitty nvim tofi waybar zsh prettier"
 
 echo "Installing dotfiles..."
 
