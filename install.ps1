@@ -39,4 +39,21 @@ foreach ($link in $Links) {
     Write-Host "Linked: $dst -> $src"
 }
 
+# Install PowerShell profile stub. $PROFILE can't be a junction (single file) and
+# a symlink would need admin, so we write a tiny stub that dot-sources the repo.
+$ProfileSource = Join-Path $Dotfiles 'powershell\profile.ps1'
+$ProfileStub = ". `"$ProfileSource`""
+$profileParent = Split-Path -Parent $PROFILE
+if (-not (Test-Path -LiteralPath $profileParent)) {
+    New-Item -ItemType Directory -Path $profileParent -Force | Out-Null
+}
+if (-not (Test-Path -LiteralPath $PROFILE)) {
+    Set-Content -LiteralPath $PROFILE -Value $ProfileStub -Encoding UTF8
+    Write-Host "Stubbed profile: $PROFILE"
+} elseif ((Get-Content -LiteralPath $PROFILE -Raw) -like "*$ProfileSource*") {
+    Write-Host "Profile stub already present: $PROFILE"
+} else {
+    Write-Warning "Profile exists and isn't stubbed: $PROFILE — add this line manually:`n  $ProfileStub"
+}
+
 Write-Host 'Dotfiles installed successfully!'

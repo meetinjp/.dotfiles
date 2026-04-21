@@ -46,7 +46,11 @@
    ```
    powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\install.ps1
    ```
-   (or `pwsh` for PowerShell 7+). It creates directory junctions — no admin or Developer Mode required.
+   (or `pwsh` for PowerShell 7+). It creates directory junctions and stubs `$PROFILE` — no admin or Developer Mode required.
+1. Run the `setup.ps1` script from an **elevated** PowerShell for one-shot machine tweaks (e.g. Caps Lock → Ctrl remap):
+   ```
+   powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\setup.ps1
+   ```
 1. Run the `setup.sh` script from Git Bash to configure Git:
    ```
    ~/.dotfiles/setup.sh
@@ -55,6 +59,7 @@
 #### Troubleshooting
 
 - "Target exists and is not a link": move or remove the offending path (e.g. `%LOCALAPPDATA%\nvim`) and rerun `install.ps1`.
+- Profile stub not loaded: confirm which host you're in by checking `$PROFILE`, then rerun `install.ps1` from that host.
 
 ## Extra Configuration
 
