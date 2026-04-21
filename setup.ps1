@@ -93,4 +93,35 @@ if ($keyid) {
     & git config --global gpg.program $gpg
 }
 
+# --- Caps Lock -> Ctrl (admin-required one-shot; self-elevates) ---
+$kbLayout   = 'HKLM:\System\CurrentControlSet\Control\Keyboard Layout'
+$desiredMap = [byte[]]@(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x1d,0x00,0x3a,0x00,0x00,0x00,0x00,0x00)
+$currentMap = (Get-ItemProperty -Path $kbLayout -Name 'Scancode Map' -ErrorAction SilentlyContinue).'Scancode Map'
+
+if ($currentMap -and -not (Compare-Object $currentMap $desiredMap)) {
+    Write-Host 'Caps Lock -> Ctrl remap: already applied.'
+} else {
+    $ans = Read-Host 'Remap Caps Lock -> Ctrl? Needs admin, will trigger UAC [Y/n]'
+    if ($ans -notmatch '^[nN]') {
+        $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if ($isAdmin) {
+            New-ItemProperty -Path $kbLayout -Name 'Scancode Map' -PropertyType Binary -Value $desiredMap -Force | Out-Null
+            Write-Host 'Caps Lock -> Ctrl remap: applied (sign out / reboot to take effect).'
+        } else {
+            $adminBlock = @'
+$kbLayout   = 'HKLM:\System\CurrentControlSet\Control\Keyboard Layout'
+$desiredMap = [byte[]]@(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x1d,0x00,0x3a,0x00,0x00,0x00,0x00,0x00)
+New-ItemProperty -Path $kbLayout -Name 'Scancode Map' -PropertyType Binary -Value $desiredMap -Force | Out-Null
+Write-Host 'Caps Lock -> Ctrl remap: applied (sign out / reboot to take effect).'
+Write-Host 'Press Enter to close...' -NoNewline
+[void][Console]::ReadLine()
+'@
+            $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+            Start-Process $shell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-Command',$adminBlock
+            Write-Host 'Elevated window launched for the Caps Lock remap - accept the UAC prompt.'
+        }
+    }
+}
+
+Write-Host ''
 Write-Host 'Setup complete.'
