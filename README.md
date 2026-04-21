@@ -2,9 +2,11 @@
 
 ## Getting Started
 
+### Linux
+
 1. Install the prerequisites:
    ```
-   git firefox stow curl neovim ripgrep wl-clipboard gcc gdb pavucontrol unzip python3 keyd brightnessctl yazi
+   git firefox stow curl neovim ripgrep wl-clipboard gcc gdb pavucontrol unzip python3 keyd brightnessctl yazi hyprland kitty tofi waybar
    ```
 1. Clone this repo _recursively_ into your home directory:
    ```
@@ -26,9 +28,33 @@
    - `neovim`
    - [FiraCode](https://github.com/tonsky/FiraCode)
 
-### Troubleshooting
+#### Troubleshooting
 
 - "existing target is not owned by stow": `unlink` or `rm` the given target and run the installation script again.
+
+### Windows
+
+1. Install the prerequisites (e.g. via `winget`):
+   - `Git.Git`
+   - `Neovim.Neovim`
+   - `BurntSushi.ripgrep.MSVC`
+1. Clone this repo _recursively_ into your home directory:
+   ```
+   git clone --recursive git@github.com:meetinjp/.dotfiles $HOME\.dotfiles
+   ```
+1. Run the `install.ps1` script in PowerShell:
+   ```
+   powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\install.ps1
+   ```
+   (or `pwsh` for PowerShell 7+). It creates directory junctions — no admin or Developer Mode required.
+1. Run the `setup.sh` script from Git Bash to configure Git:
+   ```
+   ~/.dotfiles/setup.sh
+   ```
+
+#### Troubleshooting
+
+- "Target exists and is not a link": move or remove the offending path (e.g. `%LOCALAPPDATA%\nvim`) and rerun `install.ps1`.
 
 ## Extra Configuration
 
