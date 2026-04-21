@@ -50,15 +50,15 @@
    powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\install.ps1
    ```
    (or `pwsh` for PowerShell 7+). It creates directory junctions and stubs `$PROFILE` — no admin or Developer Mode required.
-1. Run the `setup.ps1` script from an **elevated** PowerShell for one-shot machine tweaks (e.g. Caps Lock → Ctrl remap):
+1. Run the `setup.ps1` script from PowerShell — it installs the Git config templates (personal + Lunar Logic via `includeIf`) and generates SSH + GPG keys:
    ```
    powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\setup.ps1
    ```
-1. Run the `setup.sh` script from Git Bash — it configures Git identity (personal + Lunar Logic via `includeIf`) and generates SSH + GPG keys:
-   ```
-   ~/.dotfiles/setup.sh
-   ```
    Paste the printed pubkeys at https://github.com/settings/ssh/new and https://github.com/settings/gpg/new.
+1. (Optional) Run the `setup-admin.ps1` script from an **elevated** PowerShell for one-shot machine tweaks (e.g. Caps Lock → Ctrl remap):
+   ```
+   powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\setup-admin.ps1
+   ```
 
 #### Troubleshooting
 
