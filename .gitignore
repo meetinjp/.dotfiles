@@ -1,0 +1,4 @@
+# Claude Code per-directory local state (auto-generated, machine-specific).
+# Leading slash anchors to the repo root, so a future `claude/` package
+# with a nested `claude/.claude/` is unaffected.
+/.claude/
