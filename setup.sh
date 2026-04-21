@@ -27,7 +27,7 @@ WORK_EMAIL="$(git config --file ~/.gitconfig-work user.email)"
 
 echo "  name:       $(git config --file ~/.gitconfig user.name)"
 echo "  personal:   $PERSONAL_EMAIL"
-echo "  work:       $WORK_EMAIL (auto on repos matching **lunarlogic**)"
+echo "  work:       $WORK_EMAIL (auto on repos under ~/work/lunar/)"
 echo
 
 # --- SSH key ---
@@ -69,6 +69,31 @@ fi
 if [[ -n "${KEYID:-}" ]]; then
 	git config --global user.signingkey "$KEYID"
 	git config --global gpg.program "$GPG"
+fi
+
+# --- Caps Lock -> Ctrl via keyd (Linux; no-op if keyd isn't installed) ---
+if command -v keyd &>/dev/null; then
+	KEYD_CONFIG=/etc/keyd/default.conf
+	if [[ -f "$KEYD_CONFIG" ]]; then
+		if grep -Eq '^[[:space:]]*capslock[[:space:]]*=[[:space:]]*leftcontrol' "$KEYD_CONFIG"; then
+			echo "Caps Lock -> Ctrl remap (keyd): already applied."
+		else
+			echo "$KEYD_CONFIG exists with other rules — not overwriting. Add 'capslock = leftcontrol' under [main] manually."
+		fi
+	else
+		read -rp "Install keyd config for Caps Lock -> Ctrl? (needs sudo) [Y/n] " ans
+		if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+			sudo tee "$KEYD_CONFIG" >/dev/null <<'CONF'
+[ids]
+*
+
+[main]
+capslock = leftcontrol
+CONF
+			sudo systemctl enable --now keyd
+			echo "Caps Lock -> Ctrl remap (keyd): applied."
+		fi
+	fi
 fi
 
 echo "Setup complete."
