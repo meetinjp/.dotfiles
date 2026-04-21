@@ -3,6 +3,56 @@ $ErrorActionPreference = 'Stop'
 
 $Dotfiles = $PSScriptRoot
 
+# ---------------------------------------------------------------------------
+# 1. Install prerequisites via winget (idempotent)
+#
+# These are needed so Mason (inside nvim) can install language servers that
+# depend on them:
+#   - Python   → ruff, python-lsp-server, clang-format (mason installs via pip)
+#   - Go       → gopls (mason installs via `go install`)
+#   - Rustup   → optional; for rustc/cargo when editing Rust (rust-analyzer
+#                itself is installed by Mason as a prebuilt binary)
+#   - ripgrep  → used by Telescope live_grep / grep_string
+# ---------------------------------------------------------------------------
+
+$Prereqs = @(
+    @{ Id = 'Python.Python.3.12';      Override = 'InstallAllUsers=0 PrependPath=1 Include_launcher=1' },
+    @{ Id = 'GoLang.Go';               Override = $null },
+    @{ Id = 'Rustlang.Rustup';         Override = $null },
+    @{ Id = 'BurntSushi.ripgrep.MSVC'; Override = $null }
+)
+
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    Write-Host 'Ensuring prerequisites are installed via winget...'
+    foreach ($p in $Prereqs) {
+        $listed = & winget list --exact --id $p.Id --disable-interactivity --accept-source-agreements 2>&1
+        if ($listed -match 'No installed package') {
+            $installArgs = @(
+                'install', '--exact', '--id', $p.Id,
+                '--silent',
+                '--accept-package-agreements', '--accept-source-agreements',
+                '--source', 'winget',
+                '--disable-interactivity'
+            )
+            if ($p.Override) { $installArgs += @('--override', $p.Override) }
+            & winget @installArgs | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  $($p.Id): installed"
+            } else {
+                Write-Warning "  $($p.Id): winget exit $LASTEXITCODE (continuing)"
+            }
+        } else {
+            Write-Host "  $($p.Id): already installed"
+        }
+    }
+} else {
+    Write-Warning 'winget not found — skipping prerequisite installation.'
+}
+
+# ---------------------------------------------------------------------------
+# 2. Link config directories via junctions (no admin required)
+# ---------------------------------------------------------------------------
+
 $Links = @(
     @{ Source = Join-Path $Dotfiles 'nvim\.config\nvim';         Target = Join-Path $env:LOCALAPPDATA 'nvim' },
     @{ Source = Join-Path $Dotfiles 'prettier\.config\prettier'; Target = Join-Path $env:USERPROFILE '.config\prettier' }
@@ -39,8 +89,13 @@ foreach ($link in $Links) {
     Write-Host "Linked: $dst -> $src"
 }
 
-# Install PowerShell profile stub. $PROFILE can't be a junction (single file) and
-# a symlink would need admin, so we write a tiny stub that dot-sources the repo.
+# ---------------------------------------------------------------------------
+# 3. PowerShell profile stub
+#
+# $PROFILE can't be a junction (single file) and a symlink would need admin,
+# so we write a tiny stub that dot-sources the repo profile.
+# ---------------------------------------------------------------------------
+
 $ProfileSource = Join-Path $Dotfiles 'powershell\profile.ps1'
 $ProfileStub = ". `"$ProfileSource`""
 $profileParent = Split-Path -Parent $PROFILE
@@ -57,3 +112,4 @@ if (-not (Test-Path -LiteralPath $PROFILE)) {
 }
 
 Write-Host 'Dotfiles installed successfully!'
+Write-Host 'Open a new PowerShell session so PATH changes take effect, then run `nvim` to let Mason install the remaining language servers.'
