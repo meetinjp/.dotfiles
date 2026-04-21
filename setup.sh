@@ -1,19 +1,74 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 if ! command -v git &>/dev/null; then
-	echo "Git is not installed. Please install it first"
+	echo "Git is not installed. Please install it first."
 	exit 1
 fi
 
-DOTFILES="$(dirname "${BASH_SOURCE[0]}")"
+DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Setting up Git configuration..."
+# Resolve gpg — PATH on Git Bash (Windows) doesn't include it by default.
+GPG="$(command -v gpg || true)"
+if [[ -z "$GPG" && -x "/c/Program Files/Git/usr/bin/gpg.exe" ]]; then
+	GPG="/c/Program Files/Git/usr/bin/gpg.exe"
+fi
+if [[ -z "$GPG" ]]; then
+	echo "gpg not found. Install GnuPG and rerun."
+	exit 1
+fi
 
-read -rp "Name: " name
-read -rp "Email: " email
+echo "Installing git config templates..."
+cp -f "$DOTFILES/git/.gitconfig"      ~/.gitconfig
+cp -f "$DOTFILES/git/.gitconfig-work" ~/.gitconfig-work
 
-cp -f "$DOTFILES/git/.gitconfig" ~/.gitconfig
-git config --global user.name "$name"
-git config --global user.email "$email"
+PERSONAL_EMAIL="$(git config --file ~/.gitconfig user.email)"
+WORK_EMAIL="$(git config --file ~/.gitconfig-work user.email)"
 
-echo "Git configuration set up successfully!"
+echo "  name:       $(git config --file ~/.gitconfig user.name)"
+echo "  personal:   $PERSONAL_EMAIL"
+echo "  work:       $WORK_EMAIL (auto on repos matching **lunarlogic**)"
+echo
+
+# --- SSH key ---
+if [[ -f ~/.ssh/id_ed25519 ]]; then
+	echo "SSH key already at ~/.ssh/id_ed25519 — skipping."
+else
+	read -rp "Generate Ed25519 SSH key? [Y/n] " ans
+	if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+		mkdir -p ~/.ssh && chmod 700 ~/.ssh
+		ssh-keygen -t ed25519 -C "$PERSONAL_EMAIL" -f ~/.ssh/id_ed25519
+		echo
+		echo "Add this SSH public key at https://github.com/settings/ssh/new"
+		echo "------------------------------------------------------------"
+		cat ~/.ssh/id_ed25519.pub
+		echo "------------------------------------------------------------"
+		echo
+	fi
+fi
+
+# --- GPG key ---
+if "$GPG" --list-secret-keys "$PERSONAL_EMAIL" &>/dev/null; then
+	KEYID="$("$GPG" --list-secret-keys --with-colons "$PERSONAL_EMAIL" | awk -F: '/^sec:/ {print $5; exit}')"
+	echo "GPG key for $PERSONAL_EMAIL already exists (keyid=$KEYID) — using it."
+else
+	read -rp "Generate Ed25519 GPG signing key (2y, with both email UIDs)? [Y/n] " ans
+	if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+		"$GPG" --quick-gen-key "meetinjp <$PERSONAL_EMAIL>" ed25519 default 2y
+		KEYID="$("$GPG" --list-secret-keys --with-colons "$PERSONAL_EMAIL" | awk -F: '/^sec:/ {print $5; exit}')"
+		"$GPG" --quick-add-uid "$KEYID" "meetinjp <$WORK_EMAIL>"
+		echo
+		echo "Add this GPG public key at https://github.com/settings/gpg/new"
+		echo "------------------------------------------------------------"
+		"$GPG" --armor --export "$KEYID"
+		echo "------------------------------------------------------------"
+		echo
+	fi
+fi
+
+if [[ -n "${KEYID:-}" ]]; then
+	git config --global user.signingkey "$KEYID"
+	git config --global gpg.program "$GPG"
+fi
+
+echo "Setup complete."

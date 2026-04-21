@@ -1,4 +1,15 @@
+[user]
+	name = meetinjp
+	email = meetinjp@proton.me
+	# signingkey is set by setup.sh after GPG key generation.
+
 [commit]
 	gpgsign = true
+
 [tag]
 	gpgSign = true
+
+# Lunar Logic repos auto-switch to the work email via ~/.gitconfig-work.
+# Matches any remote URL containing "lunarlogic" (SSH or HTTPS).
+[includeIf "hasconfig:remote.*.url:**lunarlogic**"]
+	path = ~/.gitconfig-work

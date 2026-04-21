@@ -20,6 +20,9 @@
    ```
    ~/.dotfiles/setup.sh
    ```
+   This installs the Git config templates (personal + Lunar Logic via `includeIf`) and generates an Ed25519 SSH key and an Ed25519 GPG key (with UIDs for both emails) if they don't exist yet. Paste the printed pubkeys at:
+   - SSH: https://github.com/settings/ssh/new
+   - GPG: https://github.com/settings/gpg/new
 1. Install the postrequisites:
    - `zsh`
    - [Oh My Zsh](https://ohmyz.sh/#install)
@@ -51,10 +54,11 @@
    ```
    powershell -ExecutionPolicy Bypass -File $HOME\.dotfiles\setup.ps1
    ```
-1. Run the `setup.sh` script from Git Bash to configure Git:
+1. Run the `setup.sh` script from Git Bash — it configures Git identity (personal + Lunar Logic via `includeIf`) and generates SSH + GPG keys:
    ```
    ~/.dotfiles/setup.sh
    ```
+   Paste the printed pubkeys at https://github.com/settings/ssh/new and https://github.com/settings/gpg/new.
 
 #### Troubleshooting
 
