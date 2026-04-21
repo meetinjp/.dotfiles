@@ -9,7 +9,8 @@
 [tag]
 	gpgSign = true
 
-# Lunar Logic repos auto-switch to the work email via ~/.gitconfig-work.
-# Matches any remote URL containing "lunarlogic" (SSH or HTTPS).
-[includeIf "hasconfig:remote.*.url:**lunarlogic**"]
+# Repos cloned under ~/work/lunar/ auto-switch to the work email.
+# Everything outside that tree is assumed personal.
+# Case-insensitive so ~/Work/Lunar/foo works on Windows/macOS too.
+[includeIf "gitdir/i:~/work/lunar/"]
 	path = ~/.gitconfig-work
