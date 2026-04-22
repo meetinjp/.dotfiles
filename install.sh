@@ -14,4 +14,8 @@ done
 
 popd >/dev/null
 
+# Claude Code config — patched rather than stowed since ~/.claude.json is
+# live-mutated by Claude itself.
+"$DOTFILES/claude/apply.sh"
+
 echo "Dotfiles installed successfully!"

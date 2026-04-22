@@ -115,5 +115,15 @@ if (-not (Test-Path -LiteralPath $PROFILE)) {
     Write-Warning "Profile exists and isn't stubbed: $PROFILE — add this line manually:`n  $ProfileStub"
 }
 
+# ---------------------------------------------------------------------------
+# 4. Claude Code config
+#
+# ~/.claude.json is live-mutated by Claude itself (auth, project history,
+# caches), so we can't junction or symlink it. Patch the specific keys we
+# want enforced instead.
+# ---------------------------------------------------------------------------
+
+& (Join-Path $Dotfiles 'claude\apply.ps1')
+
 Write-Host 'Dotfiles installed successfully!'
 Write-Host 'Open a new PowerShell session so PATH changes take effect, then run `nvim` to let Mason install the remaining language servers.'

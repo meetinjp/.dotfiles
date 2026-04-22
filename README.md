@@ -16,6 +16,7 @@
    ```
    ~/.dotfiles/install.sh
    ```
+   In addition to stowing the packages, this patches `~/.claude.json` with the Claude Code config keys this repo owns (currently just `editorMode: vim`). Claude Code live-mutates that file, so it can't be stowed — the patcher merges idempotently instead.
 1. After the installation is complete, run the `setup.sh` script:
    ```
    ~/.dotfiles/setup.sh
@@ -52,7 +53,8 @@
    (or `pwsh` for PowerShell 7+). It:
    - installs the rest of the prerequisites via `winget` (Python, Go, Rustup, ripgrep) — idempotent, skips any already installed;
    - creates directory junctions for `nvim` and `prettier` configs;
-   - stubs `$PROFILE` so PowerShell picks up the repo profile (which puts `~/.local/bin` on PATH for the Claude Code CLI).
+   - stubs `$PROFILE` so PowerShell picks up the repo profile (which puts `~/.local/bin` on PATH for the Claude Code CLI);
+   - patches `~/.claude.json` with the Claude Code config keys this repo owns (currently just `editorMode: vim`). Claude Code live-mutates that file, so it can't be junctioned — the patcher merges idempotently instead.
 
    No admin or Developer Mode required. Open a new PowerShell session afterwards so the updated PATH takes effect, then run `nvim` and let Mason finish installing the language servers.
 1. Run the `setup.ps1` script from PowerShell — it installs the Git config templates (personal + Lunar Logic via `includeIf`), generates SSH + GPG keys, and offers to remap Caps Lock → Ctrl (self-elevates via UAC just for that step):
