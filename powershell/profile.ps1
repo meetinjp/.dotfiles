@@ -6,3 +6,7 @@ $LocalBin = Join-Path $env:USERPROFILE '.local\bin'
 if ((Test-Path -LiteralPath $LocalBin) -and ($env:PATH -notlike "*$LocalBin*")) {
     $env:PATH = "$LocalBin;$env:PATH"
 }
+
+if (Get-Module -ListAvailable -Name PSReadLine) {
+    Set-PSReadLineOption -EditMode Vi
+}
