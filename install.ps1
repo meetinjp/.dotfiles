@@ -125,5 +125,19 @@ if (-not (Test-Path -LiteralPath $PROFILE)) {
 
 & (Join-Path $Dotfiles 'claude\apply.ps1')
 
+# ---------------------------------------------------------------------------
+# 5. gminds — separate (eventually public) repo, brought in as a submodule.
+# Delegates to its own installer so install logic lives with the tool
+# (junctions skill into ~/.claude/skills/gminds, drops ~/.local/bin/gminds.cmd,
+# winget-installs Zellij if missing).
+# ---------------------------------------------------------------------------
+
+$GMindsInstaller = Join-Path $Dotfiles 'gminds\install.ps1'
+if (Test-Path -LiteralPath $GMindsInstaller) {
+    & $GMindsInstaller
+} else {
+    Write-Warning 'gminds submodule missing — run: git submodule update --init'
+}
+
 Write-Host 'Dotfiles installed successfully!'
 Write-Host 'Open a new PowerShell session so PATH changes take effect, then run `nvim` to let Mason install the remaining language servers.'

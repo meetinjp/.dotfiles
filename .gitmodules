@@ -3,3 +3,8 @@
 	url = git@github.com:meetinjp/nvim.git
 	branch = main
 	update = merge
+[submodule "gminds"]
+	path = gminds
+	url = git@github.com:meetinjp/gminds.git
+	branch = main
+	update = merge

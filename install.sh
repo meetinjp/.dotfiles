@@ -18,4 +18,12 @@ popd >/dev/null
 # live-mutated by Claude itself.
 "$DOTFILES/claude/apply.sh"
 
+# gminds — separate (eventually public) repo, brought in as a submodule.
+# Delegates to its own installer so the install logic lives with the tool.
+if [[ -f "$DOTFILES/gminds/install.sh" ]]; then
+    bash "$DOTFILES/gminds/install.sh"
+else
+    echo "gminds submodule missing — run: git submodule update --init"
+fi
+
 echo "Dotfiles installed successfully!"
