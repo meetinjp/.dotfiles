@@ -22,7 +22,8 @@ $Prereqs = @(
     @{ Id = 'Python.Python.3.12';      Override = 'InstallAllUsers=0 PrependPath=1 Include_launcher=1' },
     @{ Id = 'GoLang.Go';               Override = $null },
     @{ Id = 'BurntSushi.ripgrep.MSVC'; Override = $null },
-    @{ Id = 'zig.zig';                 Override = $null }
+    @{ Id = 'zig.zig';                 Override = $null },
+    @{ Id = 'JanDeDobbeleer.OhMyPosh'; Override = $null }
 )
 # Rustup is installed via rustup-init.exe (section 1b below), not winget.
 # winget's Rustlang.Rustup is an MSI that needs UAC; silent install fails
