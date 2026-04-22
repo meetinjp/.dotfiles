@@ -13,13 +13,17 @@ $Dotfiles = $PSScriptRoot
 #   - Rustup   → optional; for rustc/cargo when editing Rust (rust-analyzer
 #                itself is installed by Mason as a prebuilt binary)
 #   - ripgrep  → used by Telescope live_grep / grep_string
+#   - zig      → C compiler used by nvim-treesitter (master branch) to build
+#                parsers locally. Picked over LLVM/mingw for size (~60MB) and
+#                because nvim-treesitter's cc detection already handles `zig`.
 # ---------------------------------------------------------------------------
 
 $Prereqs = @(
     @{ Id = 'Python.Python.3.12';      Override = 'InstallAllUsers=0 PrependPath=1 Include_launcher=1' },
     @{ Id = 'GoLang.Go';               Override = $null },
     @{ Id = 'Rustlang.Rustup';         Override = $null },
-    @{ Id = 'BurntSushi.ripgrep.MSVC'; Override = $null }
+    @{ Id = 'BurntSushi.ripgrep.MSVC'; Override = $null },
+    @{ Id = 'zig.zig';                 Override = $null }
 )
 
 if (Get-Command winget -ErrorAction SilentlyContinue) {
