@@ -21,10 +21,13 @@ $Dotfiles = $PSScriptRoot
 $Prereqs = @(
     @{ Id = 'Python.Python.3.12';      Override = 'InstallAllUsers=0 PrependPath=1 Include_launcher=1' },
     @{ Id = 'GoLang.Go';               Override = $null },
-    @{ Id = 'Rustlang.Rustup';         Override = $null },
     @{ Id = 'BurntSushi.ripgrep.MSVC'; Override = $null },
     @{ Id = 'zig.zig';                 Override = $null }
 )
+# Rustup is installed via rustup-init.exe (section 1b below), not winget.
+# winget's Rustlang.Rustup is an MSI that needs UAC; silent install fails
+# quietly and leaves a phantom DB entry — same problem we hit with the
+# Zellij MSI, see gminds/install.ps1 for the matching workaround.
 
 if (Get-Command winget -ErrorAction SilentlyContinue) {
     Write-Host 'Ensuring prerequisites are installed via winget...'
@@ -51,6 +54,49 @@ if (Get-Command winget -ErrorAction SilentlyContinue) {
     }
 } else {
     Write-Warning 'winget not found — skipping prerequisite installation.'
+}
+
+# ---------------------------------------------------------------------------
+# 1b. Rust toolchain via rustup-init.exe (no admin, user-scope, modifies PATH)
+# ---------------------------------------------------------------------------
+
+function Test-CargoUsable {
+    $cmd = Get-Command cargo -ErrorAction SilentlyContinue
+    if (-not $cmd) { return $false }
+    try { $v = & cargo --version 2>&1 } catch { return $false }
+    return ($v -like 'cargo*')
+}
+
+if (Test-CargoUsable) {
+    Write-Host "Rust: $((& cargo --version) | Select-Object -First 1)"
+} else {
+    $rustup = Join-Path $env:TEMP 'rustup-init.exe'
+    Write-Host 'Downloading rustup-init.exe...'
+    try {
+        Invoke-WebRequest -Uri 'https://win.rustup.rs/x86_64' -OutFile $rustup -UseBasicParsing
+        Write-Host 'Installing Rust (stable, minimal profile)...'
+        # -y       : non-interactive, accept defaults (installs to ~/.cargo, ~/.rustup, modifies user PATH)
+        # --profile minimal : skip docs + extra components for faster install
+        & $rustup -y --default-toolchain stable --profile minimal | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host '  Rust: installed (open a new PS window so ~/.cargo/bin lands on PATH).'
+        } else {
+            Write-Warning "  Rust: rustup-init exit $LASTEXITCODE"
+        }
+    } catch {
+        Write-Warning "Rust install failed: $_"
+    } finally {
+        if (Test-Path -LiteralPath $rustup) { Remove-Item -LiteralPath $rustup -Force -ErrorAction SilentlyContinue }
+    }
+}
+
+# Clean up any phantom winget DB entry from previous failed Rustup MSI installs.
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    $stub = & winget list --exact --id Rustlang.Rustup --disable-interactivity 2>&1
+    if ($stub -notmatch 'No installed package' -and -not (Test-CargoUsable)) {
+        Write-Host 'Cleaning phantom winget Rustup DB entry...'
+        & winget uninstall --exact --id Rustlang.Rustup --disable-interactivity 2>&1 | Out-Null
+    }
 }
 
 # ---------------------------------------------------------------------------
