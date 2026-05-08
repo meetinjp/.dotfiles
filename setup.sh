@@ -30,6 +30,24 @@ echo "  personal:   $PERSONAL_EMAIL"
 echo "  work:       $WORK_EMAIL (auto on repos under ~/work/lunar/)"
 echo
 
+# --- Locale (en_US.UTF-8) ---
+# Fresh Arch / WSL Arch ships with no generated locales, which makes perl
+# (and anything else that consults LANG) spam warnings. Generate the
+# en_US.UTF-8 locale so future shells don't need the LC_ALL workaround.
+if command -v locale-gen &>/dev/null && ! locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
+	read -rp "Generate en_US.UTF-8 locale? (needs sudo) [Y/n] " ans
+	if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+		if ! grep -q '^en_US\.UTF-8 UTF-8' /etc/locale.gen 2>/dev/null; then
+			echo 'en_US.UTF-8 UTF-8' | sudo tee -a /etc/locale.gen >/dev/null
+		fi
+		sudo locale-gen
+		if [[ ! -f /etc/locale.conf ]]; then
+			echo 'LANG=en_US.UTF-8' | sudo tee /etc/locale.conf >/dev/null
+		fi
+		echo "Locale en_US.UTF-8 generated."
+	fi
+fi
+
 # --- SSH key ---
 if [[ -f ~/.ssh/id_ed25519 ]]; then
 	echo "SSH key already at ~/.ssh/id_ed25519 — skipping."

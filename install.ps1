@@ -23,7 +23,8 @@ $Prereqs = @(
     @{ Id = 'GoLang.Go';               Override = $null },
     @{ Id = 'BurntSushi.ripgrep.MSVC'; Override = $null },
     @{ Id = 'zig.zig';                 Override = $null },
-    @{ Id = 'JanDeDobbeleer.OhMyPosh'; Override = $null }
+    @{ Id = 'JanDeDobbeleer.OhMyPosh'; Override = $null },
+    @{ Id = 'wez.wezterm';             Override = $null }
 )
 # Rustup is installed via rustup-init.exe (section 1b below), not winget.
 # winget's Rustlang.Rustup is an MSI that needs UAC; silent install fails
@@ -106,7 +107,8 @@ if (Get-Command winget -ErrorAction SilentlyContinue) {
 
 $Links = @(
     @{ Source = Join-Path $Dotfiles 'nvim\.config\nvim';         Target = Join-Path $env:LOCALAPPDATA 'nvim' },
-    @{ Source = Join-Path $Dotfiles 'prettier\.config\prettier'; Target = Join-Path $env:USERPROFILE '.config\prettier' }
+    @{ Source = Join-Path $Dotfiles 'prettier\.config\prettier'; Target = Join-Path $env:USERPROFILE '.config\prettier' },
+    @{ Source = Join-Path $Dotfiles 'wezterm\.config\wezterm';   Target = Join-Path $env:USERPROFILE '.config\wezterm' }
 )
 
 Write-Host 'Installing dotfiles...'
