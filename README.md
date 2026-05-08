@@ -6,7 +6,7 @@
 
 1. Install the prerequisites:
    ```
-   git firefox stow curl neovim ripgrep wl-clipboard gcc gdb pavucontrol unzip python3 keyd brightnessctl yazi hyprland kitty tofi waybar
+   git firefox stow curl neovim ripgrep wl-clipboard gcc gdb pavucontrol unzip python3 keyd brightnessctl yazi hyprland wezterm tofi waybar
    ```
 1. Clone this repo _recursively_ into your home directory:
    ```

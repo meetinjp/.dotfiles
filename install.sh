@@ -7,7 +7,7 @@
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STOW_DIRS="hyprland kitty nvim prettier tofi waybar wezterm zsh"
+STOW_DIRS="hyprland nvim prettier tofi waybar wezterm zsh"
 
 echo "Installing dotfiles..."
 
