@@ -10,6 +10,11 @@ local config = wezterm.config_builder()
 config.front_end = 'WebGpu'
 config.webgpu_power_preference = 'LowPower'
 
+-- Keep the pane open if its pty dies (WSL OOM-kill, ssh drop, crash). Without
+-- this, the last tab's pty death silently closes the whole window so the
+-- failure is invisible.
+config.exit_behavior = 'Hold'
+
 -- Launch WSL Arch Linux instead of cmd/PowerShell. The domain name is
 -- "WSL:" + the distribution name reported by `wsl -l -v` (here: archlinux).
 -- The default user comes from /etc/wsl.conf inside the distro.

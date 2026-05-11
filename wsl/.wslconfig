@@ -1,0 +1,14 @@
+# Global WSL2 settings (applies to every distro).
+# Apply changes with `wsl --shutdown` (kills all running distros).
+#
+# Host: 16 GB total. Defaults leave WSL at ~50% (7.4 GB) + 2 GB swap, which
+# OOM-kills under parallel agent workloads (lunar/zellij + multiple Claude
+# Code sessions, each ~600 MB RSS / 2.5 GB VSZ). Raise the cap and grow swap
+# so the kernel has room to page instead of killing children.
+
+[wsl2]
+memory=12GB
+swap=8GB
+# autoMemoryReclaim=gradual would be nice but requires WSL 2.0+ — this
+# machine's WSL build rejects the key. Re-add once `wsl --version` reports
+# >= 2.0.0.

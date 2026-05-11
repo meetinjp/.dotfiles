@@ -165,6 +165,29 @@ if (-not (Test-Path -LiteralPath $PROFILE)) {
 }
 
 # ---------------------------------------------------------------------------
+# 3b. .wslconfig — single file in %USERPROFILE%; can't junction (file, not
+# dir), symlinking needs admin/dev-mode. Copy-on-diff instead. Requires
+# `wsl --shutdown` afterwards to take effect.
+# ---------------------------------------------------------------------------
+
+$WslConfigSrc = Join-Path $Dotfiles 'wsl\.wslconfig'
+$WslConfigDst = Join-Path $env:USERPROFILE '.wslconfig'
+if (Test-Path -LiteralPath $WslConfigSrc) {
+    $needsCopy = $true
+    if (Test-Path -LiteralPath $WslConfigDst) {
+        $srcHash = (Get-FileHash -LiteralPath $WslConfigSrc -Algorithm SHA256).Hash
+        $dstHash = (Get-FileHash -LiteralPath $WslConfigDst -Algorithm SHA256).Hash
+        if ($srcHash -eq $dstHash) { $needsCopy = $false }
+    }
+    if ($needsCopy) {
+        Copy-Item -LiteralPath $WslConfigSrc -Destination $WslConfigDst -Force
+        Write-Host "Wrote $WslConfigDst — run 'wsl --shutdown' to apply."
+    } else {
+        Write-Host ".wslconfig already in sync."
+    }
+}
+
+# ---------------------------------------------------------------------------
 # 4. Claude Code config
 #
 # ~/.claude.json is live-mutated by Claude itself (auth, project history,
