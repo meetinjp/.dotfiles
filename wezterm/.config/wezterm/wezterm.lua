@@ -2,6 +2,14 @@ local wezterm = require 'wezterm'
 local act = wezterm.action
 local config = wezterm.config_builder()
 
+-- Hybrid-graphics laptops: when Windows swaps GPUs the cached WebGpu adapter
+-- goes stale and WezTerm aborts with "Load library failed with error 126";
+-- OpenGL meanwhile fails with "OpenGL implementation is too old to work with
+-- glium" on this iGPU. Stay on WebGpu but pin to the iGPU via LowPower so the
+-- adapter never swaps under us.
+config.front_end = 'WebGpu'
+config.webgpu_power_preference = 'LowPower'
+
 -- Launch WSL Arch Linux instead of cmd/PowerShell. The domain name is
 -- "WSL:" + the distribution name reported by `wsl -l -v` (here: archlinux).
 -- The default user comes from /etc/wsl.conf inside the distro.
