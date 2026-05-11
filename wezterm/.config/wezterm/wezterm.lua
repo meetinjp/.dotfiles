@@ -15,6 +15,13 @@ config.webgpu_power_preference = 'LowPower'
 -- failure is invisible.
 config.exit_behavior = 'Hold'
 
+-- Cap render work. Default tracks the monitor refresh (often 120/144 Hz on
+-- modern laptops); for terminal text 30 fps is indistinguishable and frees a
+-- big chunk of iGPU + render-thread budget when many panes stream tokens in
+-- parallel (zellij + multiple Claude Code agents).
+config.max_fps = 30
+config.animation_fps = 1
+
 -- Launch WSL Arch Linux instead of cmd/PowerShell. The domain name is
 -- "WSL:" + the distribution name reported by `wsl -l -v` (here: archlinux).
 -- The default user comes from /etc/wsl.conf inside the distro.
