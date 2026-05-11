@@ -56,3 +56,39 @@ if ($changed.Count -gt 0) {
 } else {
     Write-Host "${Path}: already up to date"
 }
+
+# --- Claude Code plugins ---------------------------------------------------
+# Install Claude Code plugins user-globally so they survive across all sessions
+# (including every Lunar tab) without per-session boot work. Idempotent: skips
+# when the marketplace is already registered and the plugin cache dir exists.
+
+function Ensure-ClaudePlugin {
+    param(
+        [Parameter(Mandatory)][string]$Source,
+        [Parameter(Mandatory)][string]$Marketplace,
+        [Parameter(Mandatory)][string]$Plugin
+    )
+    if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
+        Write-Host "claude CLI not on PATH - skipping $Plugin install."
+        return
+    }
+    $known = Join-Path $HOME '.claude\plugins\known_marketplaces.json'
+    $hasMarketplace = $false
+    if (Test-Path -LiteralPath $known) {
+        $hasMarketplace = (Get-Content -LiteralPath $known -Raw) -match "`"$Marketplace`""
+    }
+    if (-not $hasMarketplace) {
+        Write-Host "Adding Claude marketplace $Marketplace from $Source..."
+        & claude plugin marketplace add $Source
+    }
+    $cache = Join-Path $HOME ".claude\plugins\cache\$Marketplace\$Plugin"
+    if (-not (Test-Path -LiteralPath $cache)) {
+        Write-Host "Installing Claude plugin $Plugin@$Marketplace..."
+        & claude plugin install "$Plugin@$Marketplace" --scope user
+    } else {
+        Write-Host "Claude plugin ${Plugin}@${Marketplace}: already installed."
+    }
+}
+
+# Each call: -Source <github owner/name | url | path>  -Marketplace <name>  -Plugin <name>
+Ensure-ClaudePlugin -Source 'JuliusBrussee/caveman' -Marketplace 'caveman' -Plugin 'caveman'
