@@ -35,3 +35,6 @@ case ":$PATH:" in
 *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
+_claude_bin="$(command -v claude)"
+[[ -n "$_claude_bin" ]] && export CLAUDE_CODE_EXECUTABLE="$_claude_bin"
+unset _claude_bin
