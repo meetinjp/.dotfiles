@@ -104,12 +104,19 @@ two different public formats:
 WSL settings live in two files, both copied by hand (neither is stowed
 because their final paths aren't under `$HOME`):
 
-| File                       | Final path                                     |
-| -------------------------- | ---------------------------------------------- |
-| `wsl/.wslconfig`           | `%USERPROFILE%\.wslconfig` (Windows host)      |
-| `wsl/etc/wsl.conf`         | `/etc/wsl.conf` (inside the WSL distro)        |
+| Source in repo               | Final path                                     |
+| ---------------------------- | ---------------------------------------------- |
+| `wsl/.wslconfig`             | `%USERPROFILE%\.wslconfig` (Windows host)      |
+| `wsl/etc/wsl.conf.template`  | rendered by `setup.sh` to `wsl/etc/wsl.conf`, then `sudo cp` to `/etc/wsl.conf` |
 
-After editing either, `wsl.exe --shutdown` from Windows and reopen.
+`wsl.conf.template` carries a `${WSL_USER}` placeholder for the
+`default=` user. `setup.sh` fills it from `$WSL_USER` (env var) or the
+current Linux user, writes the rendered `wsl.conf` next to the
+template, and prints the `sudo cp` command. The rendered file is
+gitignored so the public repo never carries a real username.
+
+After copying either file, `wsl.exe --shutdown` from Windows and
+reopen the distro.
 
 ### Renaming the WSL user
 

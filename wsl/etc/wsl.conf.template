@@ -1,0 +1,15 @@
+# Per-distro WSL settings — lives INSIDE the distro at /etc/wsl.conf.
+# This is a TEMPLATE. `setup.sh` renders ${WSL_USER} (defaults to the
+# current Linux user; override with the WSL_USER env var) into the
+# adjacent `wsl.conf`, which is gitignored. Copy that rendered file:
+#
+#   sudo cp ~/.dotfiles/wsl/etc/wsl.conf /etc/wsl.conf
+#   wsl.exe --shutdown    # then reopen the distro
+#
+# Companion file: wsl/.wslconfig (Windows host, global to all distros).
+
+[boot]
+systemd=true
+
+[user]
+default=${WSL_USER}

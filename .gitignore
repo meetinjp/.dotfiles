@@ -19,7 +19,9 @@ Thumbs.db
 .envrc.local
 .envrc
 
-# Rendered git configs (built by setup.sh from git/*.template)
-# — they contain identity, so they must never land in the public repo.
+# Rendered configs (built by setup.sh from *.template files) — they
+# contain personal identity (git emails, WSL username) so they must
+# never land in the public repo.
 git/.gitconfig
 git/.gitconfig-work
+wsl/etc/wsl.conf

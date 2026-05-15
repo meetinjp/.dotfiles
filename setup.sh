@@ -77,21 +77,31 @@ echo " .dotfiles setup"
 echo "═════════════════════════════════════════════════════════════════"
 
 # ---------------------------------------------------------------------------
-banner "1/6  Git identity"
+banner "1/6  Identity"
 # ---------------------------------------------------------------------------
-echo "Set via env vars to skip prompts: GIT_NAME, GIT_EMAIL, GIT_WORK_EMAIL."
-prompt_var GIT_NAME       "name        (e.g. meetinjp)"
-prompt_var GIT_EMAIL      "personal email"
-prompt_var GIT_WORK_EMAIL "work email  (leave blank to skip)"
+echo "Set via env vars to skip prompts: GIT_NAME, GIT_EMAIL, GIT_WORK_EMAIL, WSL_USER."
+prompt_var GIT_NAME       "git name    (e.g. meetinjp)"
+prompt_var GIT_EMAIL      "git personal email"
+prompt_var GIT_WORK_EMAIL "git work email  (leave blank to skip)"
+
+# WSL_USER goes into /etc/wsl.conf's `default=` line. Default to the
+# current Linux user when running on WSL; the env var overrides.
+ON_WSL=0
+if [[ -n "${WSL_DISTRO_NAME:-}" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
+	ON_WSL=1
+	WSL_USER="${WSL_USER:-$(whoami)}"
+	echo "  wsl user:   $WSL_USER"
+fi
 
 # ---------------------------------------------------------------------------
-banner "2/6  Render git config templates"
+banner "2/6  Render config templates"
 # ---------------------------------------------------------------------------
 render_template() {
 	local src="$1" dst="$2"
 	sed -e "s|\${GIT_NAME}|${GIT_NAME}|g" \
 	    -e "s|\${GIT_EMAIL}|${GIT_EMAIL}|g" \
-	    -e "s|\${GIT_WORK_EMAIL}|${GIT_WORK_EMAIL}|g" \
+	    -e "s|\${GIT_WORK_EMAIL}|${GIT_WORK_EMAIL:-}|g" \
+	    -e "s|\${WSL_USER}|${WSL_USER:-}|g" \
 	    "$src" > "$dst"
 	echo "  wrote $dst"
 }
@@ -100,6 +110,12 @@ if [[ -n "${GIT_WORK_EMAIL:-}" ]]; then
 	render_template "$DOTFILES/git/gitconfig-work.template" ~/.gitconfig-work
 else
 	echo "  GIT_WORK_EMAIL empty — skipping ~/.gitconfig-work"
+fi
+if (( ON_WSL )); then
+	render_template "$DOTFILES/wsl/etc/wsl.conf.template" "$DOTFILES/wsl/etc/wsl.conf"
+	echo "  copy into /etc with:  sudo cp $DOTFILES/wsl/etc/wsl.conf /etc/wsl.conf"
+else
+	echo "  not on WSL — skipping wsl.conf render"
 fi
 
 # ---------------------------------------------------------------------------
