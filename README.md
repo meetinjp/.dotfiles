@@ -5,19 +5,20 @@ Personal config for Arch Linux (desktop + WSL2). Managed with
 
 ## Layout
 
-| Dir         | Purpose                                                        | How it lands           |
-| ----------- | -------------------------------------------------------------- | ---------------------- |
-| `git/`      | gitconfig + work-email `includeIf`                             | copied by `setup.sh`   |
-| `zsh/`      | zshrc (Oh-My-Zsh, vi-mode, nvm/bun/pnpm, claude path)          | stowed                 |
-| `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)  | stowed                 |
-| `wezterm/`  | terminal config (Linux + WSL)                                  | stowed                 |
-| `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)          | stowed                 |
-| `hyprland/` | Wayland compositor (Linux desktop only)                        | stowed                 |
-| `waybar/`   | status bar (Linux desktop only)                                | stowed                 |
-| `tofi/`     | app launcher (Linux desktop only)                              | stowed                 |
-| `prettier/` | global prettier config                                         | stowed                 |
-| `claude/`   | Claude Code config patcher + plugin installer                  | run by `install.sh`    |
-| `wsl/`      | `.wslconfig` (Windows host) + `etc/wsl.conf` (inside distro)   | manual copy            |
+| Dir         | Purpose                                                      | How it lands           |
+| ----------- | ------------------------------------------------------------ | ---------------------- |
+| `git/`      | gitconfig templates (identity injected at setup time)        | rendered by `setup.sh` |
+| `zsh/`      | bare zshrc — starship prompt, vi mode, nvm/bun/pnpm          | stowed                 |
+| `starship/` | cross-shell prompt config                                    | stowed                 |
+| `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim) | stowed                |
+| `wezterm/`  | terminal config (Linux + WSL)                                | stowed                 |
+| `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)        | stowed                 |
+| `hyprland/` | Wayland compositor (Linux desktop only)                      | stowed                 |
+| `waybar/`   | status bar (Linux desktop only)                              | stowed                 |
+| `tofi/`     | app launcher (Linux desktop only)                            | stowed                 |
+| `prettier/` | global prettier config                                       | stowed                 |
+| `claude/`   | Claude Code config patcher + plugin installer                | run by `install.sh`    |
+| `wsl/`      | `.wslconfig` (Windows host) + `etc/wsl.conf` (inside distro) | manual copy            |
 
 ## Install
 
@@ -26,7 +27,8 @@ Personal config for Arch Linux (desktop + WSL2). Managed with
 Base packages (all platforms):
 
 ```
-git stow curl zsh neovim ripgrep gcc python3 unzip eza
+git stow curl zsh starship zsh-autosuggestions zsh-syntax-highlighting \
+  neovim ripgrep gcc python3 unzip eza gnupg
 ```
 
 Linux desktop additions:
@@ -34,6 +36,9 @@ Linux desktop additions:
 ```
 hyprland wezterm waybar tofi yazi firefox wl-clipboard pavucontrol keyd brightnessctl gdb
 ```
+
+Fonts (for starship + wezterm glyphs):
+[FiraCode Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/latest).
 
 ### Steps
 
@@ -46,41 +51,94 @@ hyprland wezterm waybar tofi yazi firefox wl-clipboard pavucontrol keyd brightne
    ```
    ~/.dotfiles/install.sh
    ```
-   `~/.claude.json` is live-mutated by Claude Code so it can't be stowed —
-   the patcher merges the dotfiles-owned keys idempotently instead.
-3. Run setup (git config templates, locale, SSH/GPG keys, keyd):
+3. Run setup. Pass identity via env vars (or run bare and answer
+   prompts):
    ```
+   GIT_NAME="meetinjp" \
+   GIT_EMAIL="you@example.com" \
+   GIT_WORK_EMAIL="you@work.example" \
    ~/.dotfiles/setup.sh
    ```
-   Non-interactive runs (no TTY) skip all prompts; pass `DOTFILES_YES=1` to
-   auto-accept defaults. After SSH/GPG generation, paste the printed
-   pubkeys at:
-   - SSH: https://github.com/settings/ssh/new
-   - GPG: https://github.com/settings/gpg/new
+   `setup.sh` renders `~/.gitconfig` (+ `~/.gitconfig-work` if you set
+   the work email) from `git/*.template`, generates an Ed25519 GPG key
+   with sign + auth subkeys, registers the auth subkey for SSH-over-GPG,
+   and prints the public keys to paste on GitHub.
+
+   Non-interactive runs (no TTY) skip the keyd / locale prompts; pass
+   `DOTFILES_YES=1` to auto-accept defaults.
 4. Post-deps:
-   - [Oh My Zsh](https://ohmyz.sh/#install)
-   - [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md#oh-my-zsh)
    - [NVM](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-   - [FiraCode Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases)
-     (used by wezterm)
+     for node version pinning
+5. Reopen the terminal — starship prompt + SSH-over-GPG go live.
 
-### WSL2
+### SSH-over-GPG (one key for everything)
 
-WSL settings live in two files, both copied by hand (neither is stowed
-because their final paths aren't under `$HOME`):
+`setup.sh` provisions a single Ed25519 GPG key that does both jobs:
 
-| File                       | Final path on Windows / in the distro          |
-| -------------------------- | ---------------------------------------------- |
-| `wsl/.wslconfig`           | `%USERPROFILE%\.wslconfig` (Windows host)      |
-| `wsl/etc/wsl.conf`         | `/etc/wsl.conf` (inside the WSL distro)        |
+- **Commit / tag signing** — primary `[C]` + sign `[S]` subkey.
+- **SSH auth** — `[A]` subkey, served by gpg-agent's SSH socket. No
+  `~/.ssh/id_ed25519` is generated; `ssh` talks to gpg-agent via
+  `SSH_AUTH_SOCK` (exported by `~/.zshrc`).
 
-After editing either, run `wsl.exe --shutdown` from the Windows host
-and reopen the distro.
+You still upload **two** keys to GitHub — same underlying private key,
+two different public formats:
+
+- https://github.com/settings/gpg/new — armored GPG export, used to
+  verify commit signatures.
+- https://github.com/settings/ssh/new — output of `gpg --export-ssh-key`,
+  used so `git push` over SSH authenticates against gpg-agent.
+
+`setup.sh` prints both blocks at the end of its run.
 
 ### Troubleshooting
 
 - `existing target is not owned by stow`: `unlink` (or `rm`) the target
   and rerun `install.sh`.
+- `Permission denied (publickey)` on `git push`: confirm
+  `SSH_AUTH_SOCK` points at gpg-agent — `echo $SSH_AUTH_SOCK` should
+  match `gpgconf --list-dirs agent-ssh-socket`. If not, restart the
+  shell or run `gpgconf --launch gpg-agent`.
+
+## WSL2
+
+WSL settings live in two files, both copied by hand (neither is stowed
+because their final paths aren't under `$HOME`):
+
+| File                       | Final path                                     |
+| -------------------------- | ---------------------------------------------- |
+| `wsl/.wslconfig`           | `%USERPROFILE%\.wslconfig` (Windows host)      |
+| `wsl/etc/wsl.conf`         | `/etc/wsl.conf` (inside the WSL distro)        |
+
+After editing either, `wsl.exe --shutdown` from Windows and reopen.
+
+### Renaming the WSL user (kacper → meetinjp)
+
+Cannot be done from inside the distro you're renaming (the user must
+not have any running processes). From a Windows PowerShell, **after
+closing every WSL terminal**:
+
+```powershell
+wsl -d archlinux -u root
+```
+
+Inside the root shell:
+
+```bash
+usermod -l meetinjp -d /home/meetinjp -m kacper
+groupmod -n meetinjp kacper
+sed -i 's/default=kacper/default=meetinjp/' /etc/wsl.conf
+exit
+```
+
+Back on Windows:
+
+```powershell
+wsl --shutdown
+wsl -d archlinux
+```
+
+The distro reopens with the new user and home directory. Re-run
+`~/.dotfiles/install.sh` from the new home to refresh stow symlinks.
 
 ## Extra
 
