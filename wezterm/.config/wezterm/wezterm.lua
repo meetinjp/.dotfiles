@@ -72,7 +72,7 @@ config.keys = {
 		mods = "CTRL|SHIFT",
 		action = act.SpawnCommandInNewTab({
 			domain = { DomainName = "WSL:archlinux" },
-			cwd = "/home/kacper",
+			cwd = wezterm.home_dir,
 		}),
 	},
 
