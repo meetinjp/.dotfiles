@@ -12,12 +12,14 @@ Personal config for Arch Linux (desktop + WSL2). Managed with
 | `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)  | stowed                 |
 | `wezterm/`  | terminal config (Linux + WSL)                                  | stowed                 |
 | `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)          | stowed                 |
+| `yazi/`     | file manager invoked from hyprland + CLI                       | stowed                 |
+| `zellij/`   | terminal multiplexer (lunar/cavecrew layouts)                  | stowed                 |
 | `hyprland/` | Wayland compositor (Linux desktop only)                        | stowed                 |
 | `waybar/`   | status bar (Linux desktop only)                                | stowed                 |
 | `tofi/`     | app launcher (Linux desktop only)                              | stowed                 |
 | `prettier/` | global prettier config                                         | stowed                 |
 | `claude/`   | Claude Code config patcher + plugin installer                  | run by `install.sh`    |
-| `wsl/`      | `.wslconfig` (belongs on the Windows host, not in WSL)         | manual copy            |
+| `wsl/`      | `.wslconfig` (Windows host) + `etc/wsl.conf` (inside distro)   | manual copy            |
 
 ## Install
 
@@ -66,9 +68,16 @@ hyprland wezterm waybar tofi yazi firefox wl-clipboard pavucontrol keyd brightne
 
 ### WSL2
 
-`wsl/.wslconfig` lives on the **Windows host** at
-`%USERPROFILE%\.wslconfig`, not inside the distro. Copy it over manually
-and apply with `wsl --shutdown`.
+WSL settings live in two files, both copied by hand (neither is stowed
+because their final paths aren't under `$HOME`):
+
+| File                       | Final path on Windows / in the distro          |
+| -------------------------- | ---------------------------------------------- |
+| `wsl/.wslconfig`           | `%USERPROFILE%\.wslconfig` (Windows host)      |
+| `wsl/etc/wsl.conf`         | `/etc/wsl.conf` (inside the WSL distro)        |
+
+After editing either, run `wsl.exe --shutdown` from the Windows host
+and reopen the distro.
 
 ### Troubleshooting
 

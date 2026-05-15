@@ -1,0 +1,37 @@
+# yazi — file manager invoked from hyprland ($fileManager = yazi) and as
+# a stand-alone CLI. Anything not set here keeps the upstream default;
+# reference: https://yazi-rs.github.io/docs/configuration/yazi
+
+[mgr]
+ratio          = [1, 3, 4]
+sort_by        = "natural"
+sort_sensitive = false
+sort_reverse   = false
+sort_dir_first = true
+linemode       = "size"
+show_hidden    = true
+show_symlink   = true
+
+[preview]
+wrap            = "no"
+tab_size        = 4
+max_width       = 600
+max_height      = 900
+cache_dir       = ""
+image_filter    = "triangle"
+image_quality   = 75
+ueberzug_scale  = 1
+ueberzug_offset = [0, 0, 0, 0]
+
+[opener]
+edit = [
+    { run = '$EDITOR "$@"', block = true, for = "unix" },
+]
+open = [
+    { run = 'xdg-open "$@"', desc = "Open", for = "linux" },
+]
+
+[open]
+prepend_rules = [
+    { name = "*/", use = [ "edit", "open", "reveal" ] },
+]
