@@ -12,6 +12,7 @@ Personal config for Arch Linux (desktop + WSL2). Managed with
 | `starship/` | cross-shell prompt config                                    | stowed                 |
 | `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim) | stowed                |
 | `wezterm/`  | terminal config (Linux + WSL)                                | stowed                 |
+| `tmux/`     | `~/.config/tmux/tmux.conf` — `C-a` prefix, mouse on, vim nav | stowed                 |
 | `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)        | stowed                 |
 | `hyprland/` | Wayland compositor (Linux desktop only)                      | stowed                 |
 | `waybar/`   | status bar (Linux desktop only)                              | stowed                 |
@@ -28,7 +29,7 @@ Base packages (all platforms):
 
 ```
 git stow curl zsh starship zsh-autosuggestions zsh-syntax-highlighting \
-  neovim ripgrep gcc python3 unzip eza gnupg
+  neovim ripgrep tmux gcc python3 unzip eza gnupg
 ```
 
 Linux desktop additions:
