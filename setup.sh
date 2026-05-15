@@ -6,6 +6,25 @@ if ! command -v git &>/dev/null; then
 	exit 1
 fi
 
+# confirm "prompt [Y/n]" [default-letter]
+# - In a TTY: prompt the user.
+# - Non-interactive (e.g. `bash setup.sh < /dev/null`): skip unless DOTFILES_YES=1.
+# Each action below is opt-in by default, so silent skip is the safe outcome.
+confirm() {
+	local prompt="$1" default="${2:-y}" ans
+	if [[ "${DOTFILES_YES:-0}" == "1" ]]; then
+		[[ "$default" == "y" ]]
+		return
+	fi
+	if [[ ! -t 0 ]]; then
+		echo "$prompt — no TTY, skipping (set DOTFILES_YES=1 to auto-accept)"
+		return 1
+	fi
+	read -rp "$prompt " ans
+	ans="${ans:-$default}"
+	[[ "$ans" =~ ^[yY] ]]
+}
+
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 GPG="$(command -v gpg || true)"
@@ -31,8 +50,7 @@ echo
 # (and anything else that consults LANG) spam warnings. Generate the
 # en_US.UTF-8 locale so future shells don't need the LC_ALL workaround.
 if command -v locale-gen &>/dev/null && ! locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
-	read -rp "Generate en_US.UTF-8 locale? (needs sudo) [Y/n] " ans
-	if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+	if confirm "Generate en_US.UTF-8 locale? (needs sudo) [Y/n]"; then
 		if ! grep -q '^en_US\.UTF-8 UTF-8' /etc/locale.gen 2>/dev/null; then
 			echo 'en_US.UTF-8 UTF-8' | sudo tee -a /etc/locale.gen >/dev/null
 		fi
@@ -48,8 +66,7 @@ fi
 if [[ -f ~/.ssh/id_ed25519 ]]; then
 	echo "SSH key already at ~/.ssh/id_ed25519 — skipping."
 else
-	read -rp "Generate Ed25519 SSH key? [Y/n] " ans
-	if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+	if confirm "Generate Ed25519 SSH key? [Y/n]"; then
 		mkdir -p ~/.ssh && chmod 700 ~/.ssh
 		ssh-keygen -t ed25519 -C "$PERSONAL_EMAIL" -f ~/.ssh/id_ed25519
 		echo
@@ -66,8 +83,7 @@ if "$GPG" --list-secret-keys "$PERSONAL_EMAIL" &>/dev/null; then
 	KEYID="$("$GPG" --list-secret-keys --with-colons "$PERSONAL_EMAIL" | awk -F: '/^sec:/ {print $5; exit}')"
 	echo "GPG key for $PERSONAL_EMAIL already exists (keyid=$KEYID) — using it."
 else
-	read -rp "Generate Ed25519 GPG signing key (2y, with both email UIDs)? [Y/n] " ans
-	if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+	if confirm "Generate Ed25519 GPG signing key (2y, with both email UIDs)? [Y/n]"; then
 		"$GPG" --quick-gen-key "meetinjp <$PERSONAL_EMAIL>" ed25519 default 2y
 		KEYID="$("$GPG" --list-secret-keys --with-colons "$PERSONAL_EMAIL" | awk -F: '/^sec:/ {print $5; exit}')"
 		"$GPG" --quick-add-uid "$KEYID" "meetinjp <$WORK_EMAIL>"
@@ -95,8 +111,7 @@ if command -v keyd &>/dev/null; then
 			echo "$KEYD_CONFIG exists with other rules — not overwriting. Add 'capslock = leftcontrol' under [main] manually."
 		fi
 	else
-		read -rp "Install keyd config for Caps Lock -> Ctrl? (needs sudo) [Y/n] " ans
-		if [[ ! "${ans:-y}" =~ ^[nN] ]]; then
+		if confirm "Install keyd config for Caps Lock -> Ctrl? (needs sudo) [Y/n]"; then
 			sudo tee "$KEYD_CONFIG" >/dev/null <<'CONF'
 [ids]
 *
