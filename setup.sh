@@ -8,11 +8,7 @@ fi
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Resolve gpg — PATH on Git Bash (Windows) doesn't include it by default.
 GPG="$(command -v gpg || true)"
-if [[ -z "$GPG" && -x "/c/Program Files/Git/usr/bin/gpg.exe" ]]; then
-	GPG="/c/Program Files/Git/usr/bin/gpg.exe"
-fi
 if [[ -z "$GPG" ]]; then
 	echo "gpg not found. Install GnuPG and rerun."
 	exit 1
