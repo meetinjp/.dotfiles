@@ -2,3 +2,19 @@
 # Leading slash anchors to the repo root, so a future `claude/` package
 # with a nested `claude/.claude/` is unaffected.
 /.claude/
+
+# Editor swap/backup files
+*.swp
+*.swo
+*.bak
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Per-host overrides (sourced by zshrc; kept out of repo on purpose)
+*.local
+.zshrc.local
+.envrc.local
+.envrc
