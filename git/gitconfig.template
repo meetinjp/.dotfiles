@@ -1,0 +1,16 @@
+[user]
+	name = ${GIT_NAME}
+	email = ${GIT_EMAIL}
+	# signingkey is set by setup.sh after GPG key generation.
+
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgSign = true
+
+# Repos cloned under ~/work/lunar/ auto-switch to the work email.
+# Everything outside that tree is assumed personal.
+# Case-insensitive so ~/Work/Lunar/foo works on Windows/macOS too.
+[includeIf "gitdir/i:~/work/lunar/"]
+	path = ~/.gitconfig-work

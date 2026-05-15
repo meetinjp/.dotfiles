@@ -18,3 +18,8 @@ Thumbs.db
 .zshrc.local
 .envrc.local
 .envrc
+
+# Rendered git configs (built by setup.sh from git/*.template)
+# — they contain identity, so they must never land in the public repo.
+git/.gitconfig
+git/.gitconfig-work
