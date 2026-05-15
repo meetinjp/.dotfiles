@@ -111,26 +111,32 @@ because their final paths aren't under `$HOME`):
 
 After editing either, `wsl.exe --shutdown` from Windows and reopen.
 
-### Renaming the WSL user (kacper → meetinjp)
+### Renaming the WSL user
 
-Cannot be done from inside the distro you're renaming (the user must
-not have any running processes). From a Windows PowerShell, **after
-closing every WSL terminal**:
+`wsl/etc/wsl.conf` defaults to `meetinjp`. If the user account inside
+your distro is different (e.g. the installer-default `username` you
+picked on first launch), either edit the wsl.conf before copying, or
+rename the existing user.
+
+Renaming can't be done from inside the distro being renamed — the
+user must have no running processes. From **Windows PowerShell**,
+after closing every WSL terminal:
 
 ```powershell
 wsl -d archlinux -u root
 ```
 
-Inside the root shell:
+Inside the root shell that opens, substituting `OLD_USER` (the
+current Linux username) and `NEW_USER`:
 
 ```bash
-usermod -l meetinjp -d /home/meetinjp -m kacper
-groupmod -n meetinjp kacper
-sed -i 's/default=kacper/default=meetinjp/' /etc/wsl.conf
+usermod -l NEW_USER -d /home/NEW_USER -m OLD_USER
+groupmod -n NEW_USER OLD_USER
+sed -i "s/default=OLD_USER/default=NEW_USER/" /etc/wsl.conf
 exit
 ```
 
-Back on Windows:
+Back at PowerShell:
 
 ```powershell
 wsl --shutdown
