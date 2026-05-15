@@ -1,0 +1,40 @@
+# starship — fast cross-shell prompt.
+# Reference: https://starship.rs/config
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$cmd_duration\
+$line_break\
+$character"""
+
+add_newline = true
+
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+vimcmd_symbol = "[N](bold green)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+style = "bold cyan"
+
+[git_branch]
+symbol = " "
+style = "purple"
+
+[git_status]
+ahead = "⇡${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+behind = "⇣${count}"
+modified = "!"
+staged = "+"
+untracked = "?"
+style = "yellow"
+
+[cmd_duration]
+min_time = 1000
+format = "[$duration]($style) "
+style = "yellow"

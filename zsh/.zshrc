@@ -1,43 +1,82 @@
-export ZSH="$HOME/.oh-my-zsh"
+# zsh — bare config (no Oh-My-Zsh), starship prompt.
+# Plugins installed via pacman:
+#   sudo pacman -S starship zsh-autosuggestions zsh-syntax-highlighting
 
-ZSH_THEME="robbyrussell"
-CASE_SENSITIVE="true"
+# vi mode (zsh builtin)
+bindkey -v
+export KEYTIMEOUT=1
 
-zstyle ':omz:update' mode reminder
+# History
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS HIST_IGNORE_SPACE SHARE_HISTORY
 
-plugins=(git vi-mode zsh-syntax-highlighting)
+# Completion
+autoload -Uz compinit && compinit
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-source $ZSH/oh-my-zsh.sh
+# Plugins (sourced directly; no framework).
+# zsh-syntax-highlighting must come last per upstream docs.
+for _plugin in \
+    /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+do
+    [[ -r "$_plugin" ]] && source "$_plugin"
+done
+unset _plugin
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
+# Prompt
+command -v starship >/dev/null && eval "$(starship init zsh)"
 
+# Editor
+export EDITOR="nvim"
+export VISUAL="nvim"
+export GIT_EDITOR="nvim"
+
+# Aliases
 alias v="nvim ."
 alias ls="eza -la"
 
-export GIT_EDITOR="nvim"
-
+# PATH
 [[ -d /opt/mssql-tools/bin ]] && export PATH="$PATH:/opt/mssql-tools/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
 export PATH="$PATH:$HOME/.local/bin"
 
-# Point ripgrep at the dotfiles-managed config when it exists.
+# Ripgrep
 [[ -f "$HOME/.ripgreprc" ]] && export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 
-# bun completions
-[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+# nvm
+export NVM_DIR="$HOME/.nvm"
+[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
+[[ -s "$NVM_DIR/bash_completion" ]] && source "$NVM_DIR/bash_completion"
+
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+[[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
 
 # pnpm
-export PNPM_HOME="/home/kacper/.local/share/pnpm"
+export PNPM_HOME="$HOME/.local/share/pnpm"
 case ":$PATH:" in
-*":$PNPM_HOME:"*) ;;
-*) export PATH="$PNPM_HOME:$PATH" ;;
+    *":$PNPM_HOME:"*) ;;
+    *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
-# pnpm end
+
+# Claude Code binary — only export if installed.
 _claude_bin="$(command -v claude)"
 [[ -n "$_claude_bin" ]] && export CLAUDE_CODE_EXECUTABLE="$_claude_bin"
 unset _claude_bin
+
+# SSH-over-GPG — gpg-agent acts as ssh-agent. Setup is in setup.sh:
+# ~/.gnupg/gpg-agent.conf gets `enable-ssh-support`, and the auth-subkey
+# keygrip is registered in ~/.gnupg/sshcontrol.
+export GPG_TTY="$(tty)"
+if command -v gpgconf >/dev/null; then
+    export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
+    gpgconf --launch gpg-agent 2>/dev/null || true
+fi
+
+# Per-host overrides (gitignored).
+[[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
