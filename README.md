@@ -12,8 +12,6 @@ Personal config for Arch Linux (desktop + WSL2). Managed with
 | `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)  | stowed                 |
 | `wezterm/`  | terminal config (Linux + WSL)                                  | stowed                 |
 | `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)          | stowed                 |
-| `yazi/`     | file manager invoked from hyprland + CLI                       | stowed                 |
-| `zellij/`   | terminal multiplexer (lunar/cavecrew layouts)                  | stowed                 |
 | `hyprland/` | Wayland compositor (Linux desktop only)                        | stowed                 |
 | `waybar/`   | status bar (Linux desktop only)                                | stowed                 |
 | `tofi/`     | app launcher (Linux desktop only)                              | stowed                 |
