@@ -10,7 +10,8 @@
     "hyprland/workspaces",
     "hyprland/mode",
     "hyprland/scratchpad",
-    "custom/media",
+    // "custom/media" requires ~/.config/waybar/mediaplayer.py (not shipped)
+    // "custom/media",
   ],
   "modules-center": [],
   "modules-right": [
