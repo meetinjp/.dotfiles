@@ -14,11 +14,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
 
 alias v="nvim ."
-alias ls="exa -la"
+alias ls="eza -la"
 
 export GIT_EDITOR="nvim"
 
-export PATH="$PATH:/opt/mssql-tools/bin"
+[[ -d /opt/mssql-tools/bin ]] && export PATH="$PATH:/opt/mssql-tools/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
 export PATH="$PATH:$HOME/.local/bin"
 
