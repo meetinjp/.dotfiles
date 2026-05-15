@@ -1,40 +1,58 @@
 # starship — fast cross-shell prompt.
 # Reference: https://starship.rs/config
-
-format = """
-$directory\
-$git_branch\
-$git_status\
-$cmd_duration\
-$line_break\
-$character"""
+#
+# Two-line, framed prompt. All glyphs are plain Unicode (box-drawing +
+# arrows), so the prompt renders correctly even without a Nerd Font.
+# Colors use named ANSI so the prompt tracks your terminal's theme.
 
 add_newline = true
 
+format = """
+[╭─](bold green) $directory$git_branch$git_status$nodejs$rust$python$cmd_duration
+[╰─](bold green)$character """
+
 [character]
-success_symbol = "[➜](bold green)"
-error_symbol = "[✗](bold red)"
-vimcmd_symbol = "[N](bold green)"
+success_symbol = "[❯](bold green)"
+error_symbol   = "[❯](bold red)"
+vimcmd_symbol  = "[❮](bold yellow)"
 
 [directory]
-truncation_length = 3
-truncate_to_repo = true
-style = "bold cyan"
+style              = "bold cyan"
+truncation_length  = 3
+truncate_to_repo   = true
+truncation_symbol  = "…/"
+format             = "in [$path]($style) "
 
 [git_branch]
-symbol = " "
-style = "purple"
+style  = "bold magenta"
+format = "on [$branch]($style) "
 
 [git_status]
-ahead = "⇡${count}"
-diverged = "⇕⇡${ahead_count}⇣${behind_count}"
-behind = "⇣${count}"
-modified = "!"
-staged = "+"
-untracked = "?"
-style = "yellow"
+style          = "bold yellow"
+format         = "[[$all_status$ahead_behind]]($style) "
+ahead          = "⇡${count}"
+behind         = "⇣${count}"
+diverged       = "⇕⇡${ahead_count}⇣${behind_count}"
+modified       = "!"
+staged         = "+"
+untracked      = "?"
+stashed        = "*"
+conflicted     = "✘"
+renamed        = "»"
+deleted        = "✘"
 
 [cmd_duration]
 min_time = 1000
-format = "[$duration]($style) "
-style = "yellow"
+style    = "italic yellow"
+format   = "took [$duration]($style) "
+
+[nodejs]
+format   = "via [Node $version](bold green) "
+detect_extensions = ["js", "mjs", "cjs", "ts", "tsx", "jsx"]
+detect_files      = ["package.json", ".nvmrc"]
+
+[rust]
+format = "via [Rust $version](bold red) "
+
+[python]
+format = "via [Py $version](bold yellow) "
