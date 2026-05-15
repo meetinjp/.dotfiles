@@ -11,6 +11,7 @@ Personal config for Arch Linux (desktop + WSL2). Managed with
 | `zsh/`      | zshrc (Oh-My-Zsh, vi-mode, nvm/bun/pnpm, claude path)          | stowed                 |
 | `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)  | stowed                 |
 | `wezterm/`  | terminal config (Linux + WSL)                                  | stowed                 |
+| `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)          | stowed                 |
 | `hyprland/` | Wayland compositor (Linux desktop only)                        | stowed                 |
 | `waybar/`   | status bar (Linux desktop only)                                | stowed                 |
 | `tofi/`     | app launcher (Linux desktop only)                              | stowed                 |

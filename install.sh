@@ -13,7 +13,7 @@ if ! command -v stow &>/dev/null; then
 fi
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STOW_DIRS="hyprland nvim prettier tofi waybar wezterm zsh"
+STOW_DIRS="hyprland nvim prettier ripgrep tofi waybar wezterm zsh"
 
 echo "Installing dotfiles..."
 
