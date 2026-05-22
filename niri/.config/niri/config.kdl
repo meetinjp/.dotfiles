@@ -1,0 +1,377 @@
+// niri — Wayland scrollable-tiling compositor.
+// Hybrid-GPU laptop target (AMD iGPU + Nvidia dGPU). Niri renders on the
+// AMD iGPU; the Nvidia card sleeps until `prime-run` wraps a process —
+// saves battery and dodges Nvidia/Wayland rough edges.
+//
+// Shell: Noctalia (Quickshell). Provides bar + launcher + notifications +
+// lock + polkit + wallpaper + idle handling. Spawned via `qs -c noctalia-shell`.
+// Launcher / lock / volume / brightness / media keys all use noctalia IPC.
+//
+// Live-reloads on save. Validate with: niri validate
+// Action reference:                    niri msg action
+// Cheat sheet inside the session:      Alt + Shift + /
+
+// ─── INPUT ───────────────────────────────────────────────────────────────────
+
+input {
+    keyboard {
+        xkb {
+            layout "pl"
+            // Caps Lock → Ctrl is handled OS-level by keyd, not here.
+        }
+        repeat-delay 400
+        repeat-rate 30
+    }
+
+    touchpad {
+        tap                              // tap-to-click (1/2/3-finger tap = L/R/M)
+        dwt                              // disable while typing
+        natural-scroll                   // macOS-style: two-finger up = content moves up
+        accel-speed 0.2
+        accel-profile "adaptive"
+        // button-areas: bottom-left physical press = L click,
+        //   bottom-right physical press = R click (Windows-style).
+        // Tap-to-click still gives you 2-finger-tap = R click as a bonus.
+        click-method "button-areas"
+    }
+
+    mouse {
+        accel-speed 0.0
+        accel-profile "flat"
+    }
+
+    warp-mouse-to-focus
+    // focus-follows-mouse deliberately off — keyboard-driven focus only.
+}
+
+// ─── OUTPUT ──────────────────────────────────────────────────────────────────
+// Laptop panel only. kanshi handles dynamic dock profiles (laptop / laptop+external)
+// over Niri IPC when an external connects.
+
+// PER-HOST: output name (eDP-1 / eDP-2 / etc.), resolution, refresh, and
+// scale depend on the laptop panel. Confirm via `niri msg outputs` and
+// adjust below if needed. scale 1.1 = ~10% bigger text + UI across all
+// Wayland-native apps; bump to 1.25/1.5 for chunkier, drop to 1.0 for
+// native pixel-perfect.
+output "eDP-2" {
+    mode "1920x1200@165.000"
+    scale 1.1
+    transform "normal"
+    position x=0 y=0
+    variable-refresh-rate on-demand=true
+}
+
+// ─── LAYOUT ──────────────────────────────────────────────────────────────────
+
+layout {
+    gaps 0
+    center-focused-column "never"
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    default-column-width { proportion 0.5; }
+
+    preset-window-heights {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+
+    // No focus ring, no border, no shadow — completely chromeless windows.
+    focus-ring { off; }
+    border { off; }
+    shadow { off; }
+
+    struts {
+        left 0
+        right 0
+        top 0
+        bottom 0
+    }
+
+    background-color "#1d2021"
+}
+
+prefer-no-csd
+
+// ─── CURSOR ──────────────────────────────────────────────────────────────────
+
+cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 24
+    hide-when-typing
+}
+
+// ─── HOTKEY OVERLAY ──────────────────────────────────────────────────────────
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+// ─── ENVIRONMENT ─────────────────────────────────────────────────────────────
+// Only what Niri itself launches. No Nvidia env vars here — those go through
+// `prime-run` per-process.
+
+environment {
+    // DISPLAY intentionally unset here — xwayland-satellite picks the
+    // socket and exports DISPLAY itself when it comes up.
+    QT_QPA_PLATFORM "wayland;xcb"
+    QT_QPA_PLATFORMTHEME "qt5ct"
+    GDK_BACKEND "wayland,x11"
+    MOZ_ENABLE_WAYLAND "1"
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+    XCURSOR_SIZE "24"
+    XCURSOR_THEME "Adwaita"
+    NIXOS_OZONE_WL "1"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+}
+
+// ─── DEBUG ───────────────────────────────────────────────────────────────────
+
+debug {
+    // Required for Noctalia: lets quickshell notifications + window
+    // activation requests succeed even when the xdg-activation serial
+    // is stale.
+    honor-xdg-activation-with-invalid-serial
+
+    // PER-HOST: pin niri's render device to the AMD iGPU so the Nvidia
+    // dGPU stays asleep when no prime-run process is active. Find your
+    // iGPU's stable by-path with:
+    //   ls -l /dev/dri/by-path/    # match the *-card pointing at the AMD slot
+    // Confirm by reading `lspci | grep VGA` and matching PCI bus IDs.
+    render-drm-device "/dev/dri/by-path/pci-0000:65:00.0-card"
+}
+
+// ─── SCREENSHOT ──────────────────────────────────────────────────────────────
+
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+// ─── ANIMATIONS ──────────────────────────────────────────────────────────────
+
+animations {
+    slowdown 0.7
+
+    // Kill workspace-switch transition: when both source and target
+    // workspaces have a fullscreen window covering the noctalia Top-layer
+    // bar, the animation's mid-frame briefly exposes the bar. Switching
+    // instantly skips that flash.
+    workspace-switch { off; }
+}
+
+// ─── WINDOW RULES ────────────────────────────────────────────────────────────
+
+window-rule {
+    match title="^Picture-in-Picture$"
+    open-floating true
+    default-column-width { fixed 480; }
+}
+
+// ── Ghostty ──
+// at-startup ws1 spawn → fullscreen. Every later manual Alt+Q → maximized.
+// Two separate rules keyed on at-startup so they never collide.
+window-rule {
+    match app-id="com\\.mitchellh\\.ghostty" at-startup=true
+    match app-id="^ghostty$" at-startup=true
+    open-on-workspace "1"
+    open-fullscreen true
+}
+window-rule {
+    match app-id="com\\.mitchellh\\.ghostty" at-startup=false
+    match app-id="^ghostty$" at-startup=false
+    open-maximized true
+}
+
+// ── Firefox / chromium-derivatives ──
+// clip-to-geometry strips the CSD corner halos; at-startup → ws2 fullscreen.
+window-rule {
+    match app-id="firefox"
+    match app-id="firefox-developer-edition"
+    match app-id="LibreWolf"
+    clip-to-geometry true
+}
+window-rule {
+    match app-id="firefox-developer-edition" at-startup=true
+    match app-id="firefox" at-startup=true
+    open-on-workspace "2"
+    open-fullscreen true
+}
+
+// ─── SWITCH EVENTS ───────────────────────────────────────────────────────────
+
+switch-events {
+    lid-close {
+        spawn "qs" "-c" "noctalia-shell" "ipc" "call" "lockScreen" "lock"
+    }
+}
+
+// ─── PERSISTENT WORKSPACES ───────────────────────────────────────────────────
+// Workspaces 1 and 2 are pinned + named so window-rules can route ghostty
+// to ws1 and firefox to ws2 at session start. When the external monitor is
+// connected, ws1 + ws2 live on it (open-on-output "HDMI-A-1") and ws3..9
+// stay dynamic on the laptop panel. If external is absent, niri falls back
+// to placing them on the laptop. Verify the external name with
+// `niri msg outputs` after first plug-in and adjust if different.
+
+workspace "1" {
+    open-on-output "HDMI-A-1"
+}
+workspace "2" {
+    open-on-output "HDMI-A-1"
+}
+
+// ─── SPAWN AT STARTUP ────────────────────────────────────────────────────────
+// Noctalia covers bar + launcher + notifications + lock + polkit + wallpaper.
+// xwayland-satellite handles X11 apps. kanshi manages multi-monitor.
+// Ghostty + Firefox auto-launch and land in their workspaces (rules below).
+
+spawn-at-startup "qs" "-c" "noctalia-shell"
+spawn-at-startup "kanshi"
+spawn-at-startup "xwayland-satellite"
+
+// Apps gated behind $NIRI_SKIP_APPS — unset = launch (default), set to
+// anything = skip. Useful for a clean debug session: `NIRI_SKIP_APPS=1 niri`.
+// Form `[ -n $var ] || cmd` returns 0 cleanly when skip is set AND
+// propagates cmd's exit code when skip is unset (so real spawn failures
+// still surface in niri's log).
+spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || ghostty"
+spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || firefox-developer-edition"
+
+// ─── KEYBINDINGS ─────────────────────────────────────────────────────────────
+// Mod = Alt (matches your old Hyprland muscle memory).
+// Super+L for lock so it doesn't collide with Alt+L (focus-column-right).
+// Noctalia actions go through `qs -c noctalia-shell ipc call <module> <verb>`.
+
+binds {
+    Alt+Shift+Slash      { show-hotkey-overlay; }
+
+    // Launchers
+    Alt+Q                hotkey-overlay-title="Terminal"        { spawn "ghostty"; }
+    Alt+E                hotkey-overlay-title="File manager"    { spawn "ghostty" "-e" "yazi"; }
+    Alt+D                hotkey-overlay-title="App launcher"    { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
+    Alt+Shift+Q          hotkey-overlay-title="Session menu"    { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
+    Super+L              allow-when-locked=true                 { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
+
+    // Session — quit only via Ctrl+Alt+Delete (no easy mis-hit combo).
+    Alt+C                { close-window; }
+    Ctrl+Alt+Delete      { quit; }
+    Alt+Shift+P          { power-off-monitors; }
+
+    // Focus — vim-style (h/l = column, j/k = window in column).
+    Alt+H                { focus-column-left; }
+    Alt+L                { focus-column-right; }
+    Alt+J                { focus-window-down; }
+    Alt+K                { focus-window-up; }
+    Alt+Left             { focus-column-left; }
+    Alt+Right            { focus-column-right; }
+    Alt+Down             { focus-window-down; }
+    Alt+Up               { focus-window-up; }
+    Alt+Home             { focus-column-first; }
+    Alt+End              { focus-column-last; }
+
+    // Move within workspace
+    Alt+Ctrl+H           { move-column-left; }
+    Alt+Ctrl+L           { move-column-right; }
+    Alt+Ctrl+J           { move-window-down; }
+    Alt+Ctrl+K           { move-window-up; }
+    Alt+Ctrl+Home        { move-column-to-first; }
+    Alt+Ctrl+End         { move-column-to-last; }
+
+    // Workspaces — Alt+1..9 focus, Alt+Shift+1..9 move column to N.
+    Alt+1                { focus-workspace 1; }
+    Alt+2                { focus-workspace 2; }
+    Alt+3                { focus-workspace 3; }
+    Alt+4                { focus-workspace 4; }
+    Alt+5                { focus-workspace 5; }
+    Alt+6                { focus-workspace 6; }
+    Alt+7                { focus-workspace 7; }
+    Alt+8                { focus-workspace 8; }
+    Alt+9                { focus-workspace 9; }
+    Alt+Shift+1          { move-column-to-workspace 1; }
+    Alt+Shift+2          { move-column-to-workspace 2; }
+    Alt+Shift+3          { move-column-to-workspace 3; }
+    Alt+Shift+4          { move-column-to-workspace 4; }
+    Alt+Shift+5          { move-column-to-workspace 5; }
+    Alt+Shift+6          { move-column-to-workspace 6; }
+    Alt+Shift+7          { move-column-to-workspace 7; }
+    Alt+Shift+8          { move-column-to-workspace 8; }
+    Alt+Shift+9          { move-column-to-workspace 9; }
+
+    Alt+U                { focus-workspace-down; }
+    Alt+I                { focus-workspace-up; }
+    Alt+Page_Down        { focus-workspace-down; }
+    Alt+Page_Up          { focus-workspace-up; }
+    Alt+Ctrl+Page_Down   { move-column-to-workspace-down; }
+    Alt+Ctrl+Page_Up     { move-column-to-workspace-up; }
+
+    Alt+WheelScrollDown  cooldown-ms=100 { focus-workspace-down; }
+    Alt+WheelScrollUp    cooldown-ms=100 { focus-workspace-up; }
+
+    // Multi-monitor (laptop + external)
+    // Focus:          Alt + Shift + arrow
+    // Move column:    Alt + Shift + Ctrl + arrow
+    // Move workspace: Super + Shift + arrow (entire ws + its columns)
+    Alt+Shift+Left         { focus-monitor-left; }
+    Alt+Shift+Right        { focus-monitor-right; }
+    Alt+Shift+Up           { focus-monitor-up; }
+    Alt+Shift+Down         { focus-monitor-down; }
+    Alt+Shift+Ctrl+Left    { move-column-to-monitor-left; }
+    Alt+Shift+Ctrl+Right   { move-column-to-monitor-right; }
+    Alt+Shift+Ctrl+Up      { move-column-to-monitor-up; }
+    Alt+Shift+Ctrl+Down    { move-column-to-monitor-down; }
+    Super+Shift+Left       { move-workspace-to-monitor-left; }
+    Super+Shift+Right      { move-workspace-to-monitor-right; }
+    Super+Shift+Up         { move-workspace-to-monitor-up; }
+    Super+Shift+Down       { move-workspace-to-monitor-down; }
+
+    // Consume / expel — niri's signature column manipulation.
+    Alt+Comma            { consume-window-into-column; }
+    Alt+Period           { expel-window-from-column; }
+    Alt+BracketLeft      { consume-or-expel-window-left; }
+    Alt+BracketRight     { consume-or-expel-window-right; }
+
+    // Column / window sizing
+    Alt+R                { switch-preset-column-width; }
+    Alt+Shift+R          { switch-preset-window-height; }
+    Alt+Minus            { set-column-width "-10%"; }
+    Alt+Equal            { set-column-width "+10%"; }
+    Alt+Ctrl+Minus       { set-window-height "-10%"; }
+    Alt+Ctrl+Equal       { set-window-height "+10%"; }
+
+    // Maximize / fullscreen / center
+    Alt+F                { maximize-column; }
+    Alt+Shift+F          { fullscreen-window; }
+    Alt+Ctrl+F           { expand-column-to-available-width; }
+    Alt+Ctrl+C           { center-column; }
+
+    // Layout modes
+    Alt+W                { toggle-column-tabbed-display; }
+    Alt+V                { toggle-window-floating; }
+    Alt+Shift+V          { switch-focus-between-floating-and-tiling; }
+    Alt+O                { toggle-overview; }
+
+    // Scratchpad on workspace 10.
+    Alt+S                { focus-workspace 10; }
+    Alt+Shift+S          { move-column-to-workspace 10; }
+
+    // Multimedia — routed through Noctalia IPC so OSD appears.
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume increase"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume decrease"; }
+    XF86AudioMute         allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume muteOutput"; }
+    XF86AudioMicMute      allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume muteInput"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call brightness increase"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call brightness decrease"; }
+    XF86AudioNext         allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media next"; }
+    XF86AudioPrev         allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media previous"; }
+    XF86AudioPlay         allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media playPause"; }
+    XF86AudioPause        allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media playPause"; }
+
+    // Screenshots — niri's built-in interactive UI.
+    Print                { screenshot; }
+    Ctrl+Print           { screenshot-screen; }
+    Alt+Print            { screenshot-window; }
+}

@@ -1,0 +1,20 @@
+# kanshi — auto-switch monitor profiles based on which outputs are connected.
+# Reference: man 5 kanshi
+# Niri exposes outputs over its IPC; kanshi talks to it directly.
+#
+# When you plug in an external monitor for the first time, find its name:
+#   niri msg outputs
+# then update the output identifier below (HDMI-A-1, DP-1, "Make Model Serial", etc).
+
+# Laptop alone.
+profile laptop {
+    output eDP-2 mode 1920x1200@165 position 0,0 scale 1.1
+}
+
+# Laptop + 1 external. Defaults assume external is the bigger/primary,
+# placed left of the laptop. Adjust mode + name to match your hardware.
+profile docked {
+    output eDP-2 mode 1920x1200@165 position 1920,0 scale 1.1
+    # Replace HDMI-A-1 with whatever `niri msg outputs` reports.
+    output HDMI-A-1 mode 1920x1080 position 0,0 scale 1
+}

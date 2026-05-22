@@ -1,0 +1,123 @@
+# ghostty — GPU-accelerated terminal, native GTK4/libadwaita on Linux.
+# Reference: ghostty +show-config --default --docs
+# Keybind reference: ghostty +list-keybinds --default
+# Themes: ghostty +list-themes
+
+# ─── Font ────────────────────────────────────────────────────────────────────
+font-family = FiraCode Nerd Font Mono
+font-size = 16
+# Ligatures off (matches your old WezTerm setup which mirrored kitty).
+font-feature = -calt
+font-feature = -clig
+font-feature = -liga
+
+# ─── Theme — Gruvbox Dark Hard ───────────────────────────────────────────────
+theme = Gruvbox Dark Hard
+
+# ─── Window ──────────────────────────────────────────────────────────────────
+# Niri sets prefer-no-csd, so we tell Ghostty to use server-side decorations.
+# Niri itself draws no title bars, so windows end up cleanly borderless.
+window-decoration = server
+window-padding-x = 0
+window-padding-y = 0
+# Center cells in window so fractional-scale (niri scale 1.1) rounding
+# doesn't clip the bottom TUI row in Claude / nvim / lazygit.
+window-padding-balance = true
+
+# Compact tab strip — merge titlebar + tabs into one thin strip, flat
+# (no shadow), tabs only as wide as content, and hide the strip entirely
+# when the window is maximized/fullscreen (ws1/ws2 case).
+gtk-titlebar-style = tabs
+gtk-toolbar-style = flat
+gtk-wide-tabs = false
+gtk-titlebar-hide-when-maximized = true
+window-save-state = always
+window-theme = ghostty
+background-opacity = 1.0
+gtk-single-instance = desktop
+
+# ─── Cursor ──────────────────────────────────────────────────────────────────
+# Block, no blink. Solid block matches your old WezTerm SteadyBlock.
+cursor-style = block
+cursor-style-blink = false
+# OSC-133-driven click-to-move; works with zsh shell integration.
+cursor-click-to-move = true
+
+# ─── Shell integration (zsh) ─────────────────────────────────────────────────
+# Auto-injection works for zsh out of the box. `no-cursor` keeps Ghostty's
+# block cursor across the prompt — without it, shell integration tries to
+# manage cursor shape and overrides us.
+shell-integration = zsh
+shell-integration-features = no-cursor,sudo,ssh-env,ssh-terminfo
+
+# ─── Scrollback + mouse ──────────────────────────────────────────────────────
+scrollback-limit = 100000
+mouse-hide-while-typing = true
+copy-on-select = clipboard
+clipboard-trim-trailing-spaces = true
+focus-follows-mouse = false
+
+# ─── Bell ────────────────────────────────────────────────────────────────────
+# Bell completely off — no audio, no system bell, no urgency, no title flash.
+bell-features = no-system,no-audio,no-attention,no-title
+
+# ─── Clipboard + close behavior (multi-agent QoL) ────────────────────────────
+# OSC 52 reads (vim/nvim yank pasted back via clipboard) skip the confirm
+# prompt — otherwise every clipboard read inside tmux pops a dialog.
+clipboard-read = allow
+clipboard-write = allow
+# Closing a ghostty tab with a running shell would otherwise prompt; with
+# many tmux-hosted agents that prompt is friction. Trust the shell.
+confirm-close-surface = false
+
+# ─── Linux resource isolation ────────────────────────────────────────────────
+# Each surface gets its own systemd cgroup. 8 GiB soft cap per surface gives
+# room for multi-Claude / tmux multi-agent workloads without one runaway
+# tab killing the laptop.
+linux-cgroup = always
+linux-cgroup-memory-limit = 8589934592
+
+# ─── Quick terminal (Niri supports wlr-layer-shell) ──────────────────────────
+quick-terminal-position = top
+quick-terminal-animation-duration = 0.15
+quick-terminal-autohide = true
+keybind = global:super+grave_accent=toggle_quick_terminal
+
+# ─── Notifications ───────────────────────────────────────────────────────────
+# Notify when a backgrounded command finishes (only if window unfocused).
+notify-on-command-finish = unfocused
+notify-on-command-finish-after = 15s
+
+# ─── Keybinds — ported from your old WezTerm (which had ported from kitty) ──
+# new_tab opens in current cwd when shell-integration is active, so the
+# old kitty-style ctrl+shift+y (new_tab_with_same_cwd) is redundant in
+# Ghostty 1.3+. Removed.
+keybind = ctrl+shift+t=new_tab
+keybind = ctrl+shift+alt+t=prompt_tab_title
+keybind = ctrl+shift+w=close_surface
+keybind = ctrl+shift+q=close_window
+keybind = ctrl+shift+h=previous_tab
+keybind = ctrl+shift+l=next_tab
+keybind = ctrl+shift+comma=move_tab:-1
+keybind = ctrl+shift+period=move_tab:1
+keybind = ctrl+shift+j=goto_split:next
+keybind = ctrl+shift+k=goto_split:previous
+keybind = ctrl+shift+enter=new_split:right
+keybind = ctrl+shift+d=new_split:down
+keybind = ctrl+shift+z=toggle_split_zoom
+# F11 (set below) handles fullscreen; ctrl+shift+f stays free for tmux
+# find-mode and other in-pane consumers.
+keybind = ctrl+1=goto_tab:1
+keybind = ctrl+2=goto_tab:2
+keybind = ctrl+3=goto_tab:3
+keybind = ctrl+4=goto_tab:4
+keybind = ctrl+5=goto_tab:5
+keybind = ctrl+6=goto_tab:6
+keybind = ctrl+7=goto_tab:7
+keybind = ctrl+8=goto_tab:8
+keybind = ctrl+9=goto_tab:9
+keybind = f11=toggle_fullscreen
+
+# ─── Optional per-host overrides ─────────────────────────────────────────────
+# `?` prefix makes the include optional (no error if file is missing).
+config-file = ?config.local

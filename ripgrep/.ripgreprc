@@ -1,0 +1,20 @@
+# ripgrep defaults — `rg` reads this file when RIPGREP_CONFIG_PATH points
+# at it (wired in zshrc). One flag per line.
+
+# Case-insensitive unless the pattern has an uppercase character.
+--smart-case
+
+# Search hidden files (.dotfiles, .env, ...).
+--hidden
+
+# Never descend into VCS metadata or vendored deps, even when --hidden is on.
+--glob=!.git/**
+--glob=!node_modules/**
+--glob=!.venv/**
+--glob=!__pycache__/**
+--glob=!target/**
+
+# Don't drop matches on long lines (minified JSON, log files). Show a
+# preview snippet instead of the full match.
+--max-columns=500
+--max-columns-preview

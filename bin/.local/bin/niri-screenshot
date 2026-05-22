@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# Niri's built-in screenshot UI saves to disk via `niri msg action screenshot`,
+# but doesn't put the result on the clipboard. This wrapper does both:
+#   - opens niri's interactive screenshot picker (region by default)
+#   - on success, copies the saved file's image bytes to wl-clipboard
+#
+# Bound to nothing by default — the niri config already uses Print for the
+# native flow. Use this for "I want the latest shot on the clipboard."
+
+set -eu
+
+SHOT_DIR="${HOME}/Pictures/Screenshots"
+mkdir -p "$SHOT_DIR"
+
+# Trigger the interactive screenshot. niri-msg returns 0 even on cancel,
+# so we detect cancellation by polling for a new file (up to 2s).
+BEFORE=$(ls -1t "$SHOT_DIR" 2>/dev/null | head -n1 || true)
+niri msg action screenshot
+
+AFTER="$BEFORE"
+i=0
+while [ "$AFTER" = "$BEFORE" ] && [ "$i" -lt 20 ]; do
+    sleep 0.1
+    AFTER=$(ls -1t "$SHOT_DIR" 2>/dev/null | head -n1 || true)
+    i=$((i + 1))
+done
+
+if [ -n "$AFTER" ] && [ "$AFTER" != "$BEFORE" ]; then
+    wl-copy --type image/png < "$SHOT_DIR/$AFTER"
+    notify-send -a niri-screenshot "Screenshot copied" "$SHOT_DIR/$AFTER"
+fi

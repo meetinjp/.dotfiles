@@ -1,0 +1,21 @@
+{
+  "quoteProps": "as-needed",
+  "proseWrap": "preserve",
+  "trailingComma": "all",
+  "endOfLine": "lf",
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "semi": true,
+  "tabWidth": 4,
+  "printWidth": 80,
+  "singleQuote": true,
+  "useTabs": false,
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "proseWrap": "always"
+      }
+    }
+  ]
+}
