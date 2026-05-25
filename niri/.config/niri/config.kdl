@@ -210,19 +210,26 @@ switch-events {
 }
 
 // ─── PERSISTENT WORKSPACES ───────────────────────────────────────────────────
-// Workspaces 1 and 2 are pinned + named so window-rules can route ghostty
-// to ws1 and firefox to ws2 at session start. When the external monitor is
-// connected, ws1 + ws2 live on it (open-on-output "HDMI-A-1") and ws3..9
-// stay dynamic on the laptop panel. If external is absent, niri falls back
-// to placing them on the laptop. Verify the external name with
-// `niri msg outputs` after first plug-in and adjust if different.
+// All 9 workspaces declared by NAME ("1".."9") so workspace identity is
+// stable across monitors (Hyprland-style global numbering — focus-workspace
+// "3" finds ws3 wherever it lives and follows the focus to its monitor;
+// moving ws3 to another monitor doesn't renumber it).
+//
+// Home output: ws1 + ws2 live on HDMI-A-1 when docked, ws3..9 on the laptop
+// panel (eDP-2). When external is absent, niri falls back to the laptop.
+//
+// Adjust output names via `niri msg outputs` if your dock reports something
+// other than HDMI-A-1.
 
-workspace "1" {
-    open-on-output "HDMI-A-1"
-}
-workspace "2" {
-    open-on-output "HDMI-A-1"
-}
+workspace "1" { open-on-output "HDMI-A-1"; }
+workspace "2" { open-on-output "HDMI-A-1"; }
+workspace "3" { open-on-output "eDP-2"; }
+workspace "4" { open-on-output "eDP-2"; }
+workspace "5" { open-on-output "eDP-2"; }
+workspace "6" { open-on-output "eDP-2"; }
+workspace "7" { open-on-output "eDP-2"; }
+workspace "8" { open-on-output "eDP-2"; }
+workspace "9" { open-on-output "eDP-2"; }
 
 // ─── SPAWN AT STARTUP ────────────────────────────────────────────────────────
 // Noctalia covers bar + launcher + notifications + lock + polkit + wallpaper.
@@ -281,25 +288,26 @@ binds {
     Alt+Ctrl+Home        { move-column-to-first; }
     Alt+Ctrl+End         { move-column-to-last; }
 
-    // Workspaces — Alt+1..9 focus, Alt+Shift+1..9 move column to N.
-    Alt+1                { focus-workspace 1; }
-    Alt+2                { focus-workspace 2; }
-    Alt+3                { focus-workspace 3; }
-    Alt+4                { focus-workspace 4; }
-    Alt+5                { focus-workspace 5; }
-    Alt+6                { focus-workspace 6; }
-    Alt+7                { focus-workspace 7; }
-    Alt+8                { focus-workspace 8; }
-    Alt+9                { focus-workspace 9; }
-    Alt+Shift+1          { move-column-to-workspace 1; }
-    Alt+Shift+2          { move-column-to-workspace 2; }
-    Alt+Shift+3          { move-column-to-workspace 3; }
-    Alt+Shift+4          { move-column-to-workspace 4; }
-    Alt+Shift+5          { move-column-to-workspace 5; }
-    Alt+Shift+6          { move-column-to-workspace 6; }
-    Alt+Shift+7          { move-column-to-workspace 7; }
-    Alt+Shift+8          { move-column-to-workspace 8; }
-    Alt+Shift+9          { move-column-to-workspace 9; }
+    // Workspaces — string names so identity is stable across monitors.
+    // focus-workspace "N" follows ws to its current monitor (Hyprland-style).
+    Alt+1                { focus-workspace "1"; }
+    Alt+2                { focus-workspace "2"; }
+    Alt+3                { focus-workspace "3"; }
+    Alt+4                { focus-workspace "4"; }
+    Alt+5                { focus-workspace "5"; }
+    Alt+6                { focus-workspace "6"; }
+    Alt+7                { focus-workspace "7"; }
+    Alt+8                { focus-workspace "8"; }
+    Alt+9                { focus-workspace "9"; }
+    Alt+Shift+1          { move-column-to-workspace "1"; }
+    Alt+Shift+2          { move-column-to-workspace "2"; }
+    Alt+Shift+3          { move-column-to-workspace "3"; }
+    Alt+Shift+4          { move-column-to-workspace "4"; }
+    Alt+Shift+5          { move-column-to-workspace "5"; }
+    Alt+Shift+6          { move-column-to-workspace "6"; }
+    Alt+Shift+7          { move-column-to-workspace "7"; }
+    Alt+Shift+8          { move-column-to-workspace "8"; }
+    Alt+Shift+9          { move-column-to-workspace "9"; }
 
     Alt+U                { focus-workspace-down; }
     Alt+I                { focus-workspace-up; }
