@@ -307,7 +307,7 @@ binds {
     // Multi-monitor (laptop + external)
     // Move workspace: Alt + Shift + arrow (entire ws + its columns)
     // Move column:    Alt + Shift + Ctrl + arrow
-    // Focus monitor:  Super + Shift + arrow
+    // Focus monitor:  Super + arrow
     Alt+Shift+Left         { move-workspace-to-monitor-left; }
     Alt+Shift+Right        { move-workspace-to-monitor-right; }
     Alt+Shift+Up           { move-workspace-to-monitor-up; }
@@ -316,10 +316,10 @@ binds {
     Alt+Shift+Ctrl+Right   { move-column-to-monitor-right; }
     Alt+Shift+Ctrl+Up      { move-column-to-monitor-up; }
     Alt+Shift+Ctrl+Down    { move-column-to-monitor-down; }
-    Super+Shift+Left       { focus-monitor-left; }
-    Super+Shift+Right      { focus-monitor-right; }
-    Super+Shift+Up         { focus-monitor-up; }
-    Super+Shift+Down       { focus-monitor-down; }
+    Super+Left             { focus-monitor-left; }
+    Super+Right            { focus-monitor-right; }
+    Super+Up               { focus-monitor-up; }
+    Super+Down             { focus-monitor-down; }
 
     // Consume / expel — niri's signature column manipulation.
     Alt+Comma            { consume-window-into-column; }
