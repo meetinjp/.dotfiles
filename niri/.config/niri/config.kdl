@@ -312,21 +312,21 @@ binds {
     Alt+WheelScrollUp    cooldown-ms=100 { focus-workspace-up; }
 
     // Multi-monitor (laptop + external)
-    // Focus:          Alt + Shift + arrow
+    // Move workspace: Alt + Shift + arrow (entire ws + its columns)
     // Move column:    Alt + Shift + Ctrl + arrow
-    // Move workspace: Super + Shift + arrow (entire ws + its columns)
-    Alt+Shift+Left         { focus-monitor-left; }
-    Alt+Shift+Right        { focus-monitor-right; }
-    Alt+Shift+Up           { focus-monitor-up; }
-    Alt+Shift+Down         { focus-monitor-down; }
+    // Focus monitor:  Super + Shift + arrow
+    Alt+Shift+Left         { move-workspace-to-monitor-left; }
+    Alt+Shift+Right        { move-workspace-to-monitor-right; }
+    Alt+Shift+Up           { move-workspace-to-monitor-up; }
+    Alt+Shift+Down         { move-workspace-to-monitor-down; }
     Alt+Shift+Ctrl+Left    { move-column-to-monitor-left; }
     Alt+Shift+Ctrl+Right   { move-column-to-monitor-right; }
     Alt+Shift+Ctrl+Up      { move-column-to-monitor-up; }
     Alt+Shift+Ctrl+Down    { move-column-to-monitor-down; }
-    Super+Shift+Left       { move-workspace-to-monitor-left; }
-    Super+Shift+Right      { move-workspace-to-monitor-right; }
-    Super+Shift+Up         { move-workspace-to-monitor-up; }
-    Super+Shift+Down       { move-workspace-to-monitor-down; }
+    Super+Shift+Left       { focus-monitor-left; }
+    Super+Shift+Right      { focus-monitor-right; }
+    Super+Shift+Up         { focus-monitor-up; }
+    Super+Shift+Down       { focus-monitor-down; }
 
     // Consume / expel — niri's signature column manipulation.
     Alt+Comma            { consume-window-into-column; }
