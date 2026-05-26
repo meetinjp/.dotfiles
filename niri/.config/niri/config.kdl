@@ -221,6 +221,12 @@ switch-events {
 // xwayland-satellite handles X11 apps. kanshi manages multi-monitor.
 // Ghostty + Firefox auto-launch and land in their workspaces (rules below).
 
+// Push Wayland env into the systemd user manager + dbus activation env so
+// xdg-desktop-portal-gnome (screencast for Loom/OBS/Meet) sees WAYLAND_DISPLAY
+// and starts cleanly. niri is not launched as niri.service here, so
+// graphical-session.target is held active by ~/.config/systemd/user/niri-session-anchor.service.
+spawn-at-startup "sh" "-c" "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP; dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP; systemctl --user restart xdg-desktop-portal.service xdg-desktop-portal-gnome.service"
+
 spawn-at-startup "qs" "-c" "noctalia-shell"
 spawn-at-startup "kanshi"
 spawn-at-startup "xwayland-satellite"
@@ -244,7 +250,7 @@ binds {
     // Launchers
     Alt+Q                hotkey-overlay-title="Terminal"        { spawn "ghostty"; }
     Alt+E                hotkey-overlay-title="File manager"    { spawn "ghostty" "-e" "yazi"; }
-    Alt+D                hotkey-overlay-title="App launcher"    { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
+    Alt+Space            hotkey-overlay-title="App launcher"    { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
     Alt+Shift+Q          hotkey-overlay-title="Session menu"    { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
     Super+L              allow-when-locked=true                 { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
 
@@ -305,21 +311,25 @@ binds {
     Alt+WheelScrollUp    cooldown-ms=100 { focus-workspace-up; }
 
     // Multi-monitor (laptop + external)
-    // Move workspace: Alt + Shift + arrow (entire ws + its columns)
-    // Move column:    Alt + Shift + Ctrl + arrow
-    // Focus monitor:  Super + arrow
+    // Focus monitor:  Alt + Shift + hjkl
+    // Move workspace: Alt + Shift + arrow         (entire ws + its columns)
+    // Move column:    Alt + Shift + Ctrl + hjkl/arrow
+    Alt+Shift+H            { focus-monitor-left; }
+    Alt+Shift+L            { focus-monitor-right; }
+    Alt+Shift+J            { focus-monitor-down; }
+    Alt+Shift+K            { focus-monitor-up; }
     Alt+Shift+Left         { move-workspace-to-monitor-left; }
     Alt+Shift+Right        { move-workspace-to-monitor-right; }
     Alt+Shift+Up           { move-workspace-to-monitor-up; }
     Alt+Shift+Down         { move-workspace-to-monitor-down; }
+    Alt+Shift+Ctrl+H       { move-column-to-monitor-left; }
+    Alt+Shift+Ctrl+L       { move-column-to-monitor-right; }
+    Alt+Shift+Ctrl+J       { move-column-to-monitor-down; }
+    Alt+Shift+Ctrl+K       { move-column-to-monitor-up; }
     Alt+Shift+Ctrl+Left    { move-column-to-monitor-left; }
     Alt+Shift+Ctrl+Right   { move-column-to-monitor-right; }
     Alt+Shift+Ctrl+Up      { move-column-to-monitor-up; }
     Alt+Shift+Ctrl+Down    { move-column-to-monitor-down; }
-    Super+Left             { focus-monitor-left; }
-    Super+Right            { focus-monitor-right; }
-    Super+Up               { focus-monitor-up; }
-    Super+Down             { focus-monitor-down; }
 
     // Consume / expel — niri's signature column manipulation.
     Alt+Comma            { consume-window-into-column; }
