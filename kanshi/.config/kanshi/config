@@ -11,10 +11,10 @@ profile laptop {
     output eDP-2 mode 1920x1200@165 position 0,0 scale 1.1
 }
 
-# Laptop + 1 external. Defaults assume external is the bigger/primary,
-# placed left of the laptop. Adjust mode + name to match your hardware.
+# Laptop + 1 external. Laptop sits on the left, external on the right.
+# eDP-2 logical width at scale 1.1 = 1920/1.1 ≈ 1745, so external starts at x=1745.
 profile docked {
-    output eDP-2 mode 1920x1200@165 position 1920,0 scale 1.1
+    output eDP-2 mode 1920x1200@165 position 0,0 scale 1.1
     # Replace HDMI-A-1 with whatever `niri msg outputs` reports.
-    output HDMI-A-1 mode 1920x1080 position 0,0 scale 1
+    output HDMI-A-1 mode 1920x1080 position 1745,0 scale 1
 }
