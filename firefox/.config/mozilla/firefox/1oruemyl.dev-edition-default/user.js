@@ -17,9 +17,18 @@
 // GPU compositor — force WebRender for consistent GPU rendering.
 user_pref("gfx.webrender.all", true);
 
-// Hardware video decode on Linux (VA-API). Offloads video to GPU.
-user_pref("media.ffmpeg.vaapi.enabled", true);
-user_pref("media.hardware-video-decoding.force-enabled", true);
+// Hardware video decode (VA-API) — DISABLED on this hybrid GPU box.
+// renderD128=NVIDIA (flaky VDPAU-wrapper VA-API under Wayland),
+// renderD129=AMD iGPU. Firefox probes the NVIDIA node first and stutters;
+// force-enabled also bypassed the safety blocklist so it never fell back
+// cleanly → choppy YouTube. Software decode on the Ryzen iGPU handles
+// 1080p/4K fine. To revisit proper HW decode, pin Firefox to the AMD
+// render node via MOZ_DRM_DEVICE=/dev/dri/renderD129 (note: node numbers
+// can swap across boots — use a /dev/dri/by-path entry for stability).
+// Set false explicitly (not just removed): a commented-out pref leaves the
+// previously-applied value stale in prefs.js, so we force it back to default.
+user_pref("media.ffmpeg.vaapi.enabled", false);
+user_pref("media.hardware-video-decoding.force-enabled", false);
 
 // Memory cache — store more decoded pages/images for faster revisits.
 // 128 MB (default ~32 MB on 8GB+ machines).
