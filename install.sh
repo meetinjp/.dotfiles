@@ -19,6 +19,7 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # is sudo-installed by setup.sh, not stowed.
 STOW_DIRS=(
 	bin
+	firefox
 	ghostty
 	kanshi
 	niri
