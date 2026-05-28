@@ -40,6 +40,19 @@ user_pref("browser.tabs.unloadOnLowMemory", true);
 // Gentle — only kicks in under real pressure, won't unload tabs casually.
 user_pref("browser.low_commit_space_threshold_percent", 20);
 
+// Bigger HTTP connection pool — faster page loads on multi-asset sites.
+user_pref("network.http.max-connections", 1800);
+user_pref("network.http.max-persistent-connections-per-server", 10);
+
+// Skip request pacing on fast machines.
+user_pref("network.http.pacing.requests.enabled", false);
+
+// Faster image decoding — larger chunks per pass.
+user_pref("image.mem.decode_bytes_at_a_time", 65536);
+
+// 1 GB combined media cache (default 512 MB) — fewer re-fetches on video sites.
+user_pref("media.memory_caches_combined_limit_kb", 1048576);
+
 
 /****************************************************************************
  * PESKYFOX — UI annoyances (verbatim from upstream)                        *
@@ -120,3 +133,21 @@ user_pref("findbar.highlightAll", true);
 
 // Don't gobble trailing whitespace on double-click word selection.
 user_pref("layout.word_select.eat_space_to_next_word", false);
+
+// Kill tab hover preview cards.
+user_pref("browser.tabs.hoverPreview.enabled", false);
+user_pref("browser.tabs.hoverPreview.showThumbnails", false);
+user_pref("browser.tabs.cardPreview.enabled", false);
+user_pref("browser.tabs.cardPreview.showThumbnails", false);
+
+// Block meta-refresh / auto-reload ads.
+user_pref("accessibility.blockautorefresh", true);
+
+// Stop hoarding 15 bookmark backup copies.
+user_pref("browser.bookmarks.max_backups", 1);
+
+// Fewer URL bar dropdown results — less noise.
+user_pref("browser.urlbar.maxRichResults", 5);
+
+// Search box queries open in new tab instead of current.
+user_pref("browser.search.openintab", true);
