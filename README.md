@@ -57,7 +57,7 @@ Then the full stack. Split into official-repo and AUR groups:
 
 ```sh
 sudo pacman -S --needed \
-    niri xwayland-satellite ghostty kanshi \
+    niri xwayland-satellite ghostty kanshi wlsunset \
     cachyos-niri-noctalia noctalia-shell noctalia-qs \
     xdg-desktop-portal-gnome xdg-desktop-portal-gtk gnome-keyring \
     brightnessctl wl-clipboard cliphist grim slurp \
@@ -264,6 +264,10 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
 - External monitor doesn't show up: `niri msg outputs` lists the real
   output name; update `kanshi/.config/kanshi/config` to match
   (`HDMI-A-1` and `DP-1` are the most common identifiers).
+- Screen never warms at night: wlsunset is spawned with placeholder
+  `0.00` coordinates. Edit the `spawn-at-startup "wlsunset"` line in
+  `niri/.config/niri/config.kdl` with your real lat/long (decimal
+  degrees), then reload niri or rerun `wlsunset` manually.
 - Autologin doesn't fire: check
   `sudo systemctl cat getty@tty1` for the `ExecStart=` line containing
   `--autologin <yourname>`. If absent, rerun `setup.sh` (step 7

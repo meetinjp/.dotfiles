@@ -219,6 +219,7 @@ switch-events {
 // ─── SPAWN AT STARTUP ────────────────────────────────────────────────────────
 // Noctalia covers bar + launcher + notifications + lock + polkit + wallpaper.
 // xwayland-satellite handles X11 apps. kanshi manages multi-monitor.
+// wlsunset warms the display color temperature after sunset.
 // Ghostty + Firefox auto-launch and land in their workspaces (rules below).
 
 // Push Wayland env into the systemd user manager + dbus activation env so
@@ -230,6 +231,10 @@ spawn-at-startup "sh" "-c" "systemctl --user import-environment WAYLAND_DISPLAY 
 spawn-at-startup "qs" "-c" "noctalia-shell"
 spawn-at-startup "kanshi"
 spawn-at-startup "xwayland-satellite"
+// wlsunset — gamma/temp shift by real sunrise/sunset. Replace the lat/long
+// below with your coordinates (e.g. -l 52.23 -L 21.01 for Warsaw); decimal
+// degrees, north + / south -, east + / west -. Defaults: 6500K day, 4000K night.
+spawn-at-startup "wlsunset" "-l" "0.00" "-L" "0.00"
 
 // Apps gated behind $NIRI_SKIP_APPS — unset = launch (default), set to
 // anything = skip. Useful for a clean debug session: `NIRI_SKIP_APPS=1 niri`.
