@@ -9,6 +9,12 @@ display manager — getty@tty1 autologins, and zsh's `.zprofile` execs
 `niri --session` directly. Managed with
 [GNU stow](https://www.gnu.org/software/stow/).
 
+> **On macOS?** The CLI/dev half of this repo is cross-platform; the Linux
+> desktop is not. Skip the CachyOS/pacman sections below and jump to
+> **[macOS (Xcode box)](#macos-xcode-box)** — `install.sh` runs `brew bundle`
+> and stows everything in one shot, and that section has a full **React Native
+> / iOS** build walkthrough (Xcode 26, rbenv Ruby, CocoaPods, iPad).
+
 Hybrid-GPU target (AMD iGPU + Nvidia dGPU laptops). Niri renders on the
 AMD iGPU; the Nvidia card sleeps until `prime-run` wraps a process. Keeps
 Wayland-on-Nvidia headaches out of the desktop while leaving full GPU
@@ -163,27 +169,37 @@ screenshots, display arrangement, and GPU management. `install.sh` and
 `setup.sh` branch on `uname`, so the same scripts run on both OSes.
 
 ```sh
-# 1. Xcode toolchain + Homebrew
-xcode-select --install                       # Command Line Tools (git, clang)
+# 1. Command Line Tools + Homebrew (prerequisites for everything below)
+xcode-select --install                       # git, clang, make
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 2. Packages (the pacman-list analog). bun/nvm/uv self-install (see Brewfile).
-brew bundle --file=~/.dotfiles/Brewfile
+# 2. Clone WITHOUT sudo — sudo makes the repo root-owned and breaks git + stow.
+#    Clone over HTTPS; a fresh box has no SSH key yet.
+git clone https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
+
+#    The nvim config is a submodule with an SSH URL. Before your key is on
+#    GitHub, initialise it over HTTPS (otherwise ~/.config/nvim is empty):
+git -C ~/.dotfiles -c url."https://github.com/".insteadOf="git@github.com:" \
+    submodule update --init --recursive
+
+# 3. install.sh runs `brew bundle` (the WHOLE Brewfile — the "pacman -S"
+#    equivalent: full CLI + React Native/iOS toolchain) and then stows configs.
+~/.dotfiles/install.sh
+
+# 4. Identity + GPG/SSH (auto-skips the Linux keyd/getty/oomd steps)
+GIT_NAME="meetinjp" GIT_EMAIL="you@example.com" ~/.dotfiles/setup.sh
+
+# 5. Self-installing runtimes not in Homebrew (manage their own ~/ dirs)
 curl -fsSL https://bun.sh/install | bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 3. Clone + stow + identity (same entrypoints as Linux)
-git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
-~/.dotfiles/install.sh                        # stows the common packages only
-GIT_NAME=… GIT_EMAIL=… ~/.dotfiles/setup.sh   # GPG/SSH; skips keyd/getty/oomd
 ```
 
 What the macOS branches do differently:
 
 | Concern        | Linux                          | macOS                                                        |
 | -------------- | ------------------------------ | ------------------------------------------------------------ |
-| Packages       | pacman / paru                  | Homebrew (`Brewfile`); `/opt/homebrew` `shellenv` in zprofile |
+| Packages       | pacman / paru                  | Homebrew (`Brewfile`); `brew shellenv` probes `/opt/homebrew` + `/usr/local` |
 | zsh plugins    | `/usr/share/zsh/plugins`       | `$HOMEBREW_PREFIX/share` (probed in `.zshrc`)                |
 | SSH auth       | gpg-agent (`gpgconf` socket)   | **same** — gpg-agent parity, `pinentry-mac` auto-pinned       |
 | Caps → Ctrl    | keyd (`/etc/keyd`)             | `hidutil` LaunchAgent (`~/Library/LaunchAgents`)             |
@@ -191,9 +207,112 @@ What the macOS branches do differently:
 | Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
 | Desktop / VM   | niri, kanshi, prime-run, KVM   | skipped — use native macOS                                   |
 
-zsh is already the default shell on macOS (Catalina+), so step 4's `chsh`
-is usually unnecessary. Grant Ghostty Accessibility permission for the
-quick-terminal global hotkey to fire.
+zsh is already the default shell on macOS (Catalina+), so no `chsh` is needed
+to *use* zsh. To run Homebrew's newer zsh instead of Apple's `/bin/zsh`:
+
+```sh
+echo "$(brew --prefix)/bin/zsh" | sudo tee -a /etc/shells
+chsh -s "$(brew --prefix)/bin/zsh"
+```
+
+Grant Ghostty Accessibility permission for the quick-terminal global hotkey to
+fire (System Settings → Privacy & Security → Accessibility).
+
+### Ruby (rbenv — the "nvm for Ruby")
+
+Apple's system Ruby is 2.6 and deprecated; never `gem install` against it.
+`rbenv` (in the `Brewfile`, initialised in `.zshrc`) is the Ruby analog of nvm:
+it installs and switches between arbitrary Ruby versions — modern *and* legacy
+— and auto-selects per directory from a project's `.ruby-version`.
+
+```sh
+rbenv install -l                 # list installable versions
+rbenv install 3.4.9              # install one (ruby-build compiles it)
+rbenv global 3.4.9              # default for new shells
+cd some/project && rbenv local 3.2.6   # pin this dir (writes .ruby-version)
+ruby -v                          # confirms the shim resolved
+```
+
+`bundler` is installed into every Ruby automatically by the
+`rbenv-default-gems` plugin (driven by the stowed `~/.rbenv/default-gems`).
+`~/.gemrc` (stowed from `ruby/`) sets `--no-document` so installs are fast. The
+`openssl@3` / `libyaml` / `readline` build deps are in the `Brewfile` so
+`ruby-build` can compile any version without missing-header errors.
+
+> **Legacy Rubies (< 3.1):** these predate OpenSSL 3 and modern Clang and can
+> fail to build. Fixes, in order of preference: pick the newest patch of that
+> minor line (e.g. `3.0.7` over `3.0.0`); or pass build flags, e.g.
+> `RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@3)" rbenv install 2.7.8`.
+> See the ruby-build wiki's "Troubleshooting" if a specific version still fails.
+
+### React Native / iOS (macOS)
+
+The `Brewfile` installs the native-build stack: `node`, `watchman`, the `rbenv`
+Ruby toolchain above, `ccache`, `git-lfs`, `xcbeautify`, `ios-deploy`, and
+`fastlane`. **CocoaPods is intentionally _not_ a Homebrew formula** — brew runs
+it on its own Ruby, so `pod` and `bundle exec pod` would resolve to different
+versions; it's installed through the app's `Gemfile` instead (below). **Xcode
+is not a Homebrew package** either and must be installed separately.
+
+**Xcode 26 on Intel.** Xcode 26 is a *Universal* binary and runs on the Intel
+Macs macOS 26 Tahoe still supports (MacBook Pro 16″ 2019 / 13″ 2020, iMac 2020,
+Mac Pro 2019) — it needs macOS Sequoia 15.6+ (Xcode 26.0–26.3) or Tahoe 26.2+
+(26.4.1/26.5). ⚠️ **Do not install it via the `xcodes` CLI or the App Store on
+an Intel Mac** — both can deliver the *arm64-only* `.xip`, which fails to launch
+with `Bad CPU type in executable`. Instead grab the **Universal** build
+manually:
+
+```sh
+# 1. Download the larger "Universal" Xcode 26 .xip (~2.6 GB, vs ~2.0 GB arm64)
+#    from https://developer.apple.com/download/all/ (sign in with your Apple ID).
+# 2. Expand + install:
+xip --expand ~/Downloads/Xcode_26.x.xip
+sudo mv Xcode.app /Applications/
+
+# 3. Verify it's actually x86_64/universal (the whole point):
+file /Applications/Xcode.app/Contents/MacOS/Xcode    # must say x86_64 or universal
+
+# 4. Point the toolchain at it + accept the license + finish first-launch setup:
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+sudo xcodebuild -runFirstLaunch
+xcodebuild -version                                   # → Xcode 26.x
+```
+
+(AI / Coding-Intelligence features are disabled on Intel, but the compiler,
+Simulator, and device pipeline all work.)
+
+**Build the app** (legacy CocoaPods-based RN):
+
+```sh
+cd path/to/your-rn-app
+rbenv install "$(cat .ruby-version)"     # match the project's Ruby
+bundle install                            # project's pinned cocoapods/fastlane
+nvm install 20 && nvm use 20              # legacy RN wants Node 18/20 LTS — brew's node is too new
+npm install                               # or yarn / pnpm, per the lockfile (honor .nvmrc/engines)
+bundle exec pod install --project-directory=ios
+
+# iPad simulator:
+xcrun simctl list devices | grep -i ipad           # pick a booted/available iPad
+npx react-native run-ios --simulator="iPad (A16)"  # name from the list above
+
+# Physical iPad (tethered): open ios/<App>.xcworkspace in Xcode, set your
+# signing Team once, then:
+npx react-native run-ios --device
+```
+
+Always open the **`.xcworkspace`** (not the `.xcodeproj`) once CocoaPods has
+run. If a pod ships an arm64-only `.xcframework`, Simulator builds may fail to
+link — run `xcodebuild -downloadPlatform iOS` or build for a device instead.
+
+If the iOS build fails in the **"Bundle React Native code and images"** phase
+with `node: command not found`, that's because Xcode build phases don't read
+your shell config (so `nvm`/Homebrew `node` aren't on their `PATH`). Point the
+app's `ios/.xcode.env` at an absolute path: `export NODE_BINARY=$(command -v node)`.
+
+> Heads-up: macOS 27 will be Apple-Silicon-only, and CocoaPods goes read-only in
+> Dec 2026. Fine for a legacy app with a locked `Podfile.lock`, but this Intel
+> box is a last-generation platform — plan accordingly for long-term work.
 
 ## SSH-over-GPG (one key for everything)
 
@@ -292,6 +411,16 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
 
 ## Troubleshooting
 
+- **macOS — `fatal: detected dubious ownership` / can't edit repo files**: the
+  repo was cloned with `sudo` and is owned by `root`. Fix it with
+  `sudo chown -R "$(whoami):staff" ~/.dotfiles` (and never clone with `sudo`).
+- **macOS — Neovim opens bare (no plugins / no highlighting)**: the
+  `nvim/.config/nvim` submodule wasn't initialised (its remote is an SSH URL,
+  which fails before your key is on GitHub). Init it over HTTPS:
+  `git -C ~/.dotfiles -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive`.
+- **macOS — no syntax highlighting / missing `node`, `eza`, etc.**: `brew bundle`
+  was never run. `~/.dotfiles/install.sh` now does it automatically; or run
+  `brew bundle --file=~/.dotfiles/Brewfile` directly.
 - `existing target is not owned by stow`: `unlink` (or `rm`) the target
   and rerun `install.sh`.
 - `Permission denied (publickey)` on `git push`: confirm `SSH_AUTH_SOCK`

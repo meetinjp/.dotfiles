@@ -1,0 +1,4 @@
+# Gems auto-installed into every Ruby that `rbenv install` builds, via the
+# rbenv-default-gems plugin (stowed to ~/.rbenv/default-gems). Keep this minimal —
+# project-specific gems belong in the project's Gemfile.
+bundler

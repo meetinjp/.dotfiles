@@ -13,12 +13,22 @@ else
 	export LC_ALL=C.UTF-8 LANG=C.UTF-8
 fi
 
-if ! command -v stow &>/dev/null; then
-	echo "stow not found. Install GNU stow and rerun." >&2
-	exit 1
+DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# macOS: install the Homebrew package set first (the pacman-list analog). This
+# also provides `stow` itself, so it must run before the stow check below. On
+# Linux, packages come from pacman (see README) — brew is absent and skipped.
+if is_macos && command -v brew &>/dev/null; then
+	echo "Installing Homebrew packages (brew bundle)..."
+	brew bundle --file="$DOTFILES/Brewfile" || \
+		echo "  brew bundle reported errors — continuing (rerun it manually if needed)."
 fi
 
-DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! command -v stow &>/dev/null; then
+	echo "stow not found. Install GNU stow and rerun." >&2
+	echo "  macOS: brew bundle --file=$DOTFILES/Brewfile   |   Linux: sudo pacman -S stow" >&2
+	exit 1
+fi
 
 # Each entry is a stow package — its contents are symlinked into $HOME.
 # Note: getty@tty1 autologin override lives at /etc/systemd/system/... and
@@ -33,6 +43,7 @@ COMMON_DIRS=(
 	nvim
 	prettier
 	ripgrep
+	ruby
 	starship
 	tmux
 	zsh
@@ -50,6 +61,13 @@ else
 fi
 
 echo "Installing dotfiles..."
+
+# The ruby package stows a single file into rbenv's root (~/.rbenv/default-gems).
+# If ~/.rbenv doesn't exist yet, stow would "tree-fold" and symlink the WHOLE
+# ~/.rbenv to the repo — then `rbenv install` would write compiled Rubies into
+# the git tree. Pre-creating the real dir forces stow to fold into it and link
+# only the leaf file. Idempotent.
+mkdir -p "$HOME/.rbenv"
 
 pushd "$DOTFILES" >/dev/null
 

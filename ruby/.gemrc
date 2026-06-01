@@ -1,0 +1,7 @@
+# gem defaults (stowed to ~/.gemrc). Skip generating ri/rdoc on every install —
+# big speedup, and you almost never read local API docs from the gem cache.
+gem: --no-document
+install: --no-document
+update: --no-document
+# Be patient on flaky networks instead of failing a long bundle install.
+:backtrace: false

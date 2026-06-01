@@ -106,6 +106,12 @@ case ":$PATH:" in
     *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 
+# rbenv — Ruby version manager (used to match a project's .ruby-version, e.g.
+# for a React Native app's CocoaPods/bundler toolchain). Guarded so the shell
+# stays clean on hosts without rbenv. `rbenv init` puts the shims dir on PATH
+# and enables per-directory auto-switching.
+command -v rbenv >/dev/null && eval "$(rbenv init - zsh)"
+
 # Claude Code binary — only export if installed.
 _claude_bin="$(command -v claude)"
 [[ -n "$_claude_bin" ]] && export CLAUDE_CODE_EXECUTABLE="$_claude_bin"

@@ -463,6 +463,14 @@ if is_macos; then
 	echo "   gpg --version && gpgconf --list-dirs agent-ssh-socket   # gpg-ssh"
 	echo "   system_profiler SPDisplaysDataType | grep Chipset   # GPU"
 	echo "   xcode-select -p                                     # Xcode toolchain path"
+	STEP=$((STEP + 1))
+
+	echo
+	echo "$STEP. React Native / iOS build: install the FULL Xcode 26 app — on Intel"
+	echo "   download the *Universal* .xip from developer.apple.com (the App Store"
+	echo "   and the 'xcodes' CLI can ship an arm64-only build that won't launch)."
+	echo "   Then per project: rbenv install \$(cat .ruby-version); bundle install;"
+	echo "   bundle exec pod install. Full walkthrough: README 'React Native / iOS'."
 else
 	echo "$STEP. Reboot to land in niri (tty1 autologin → niri-session):"
 	echo "   sudo systemctl reboot"
