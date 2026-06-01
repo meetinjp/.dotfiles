@@ -128,3 +128,6 @@ fi
 
 # Per-host overrides (gitignored).
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+# bun completions
+[ -s "/Users/kacper/.bun/_bun" ] && source "/Users/kacper/.bun/_bun"
