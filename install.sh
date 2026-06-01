@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# perl (used by stow) spams locale warnings if LANG points at an
-# ungenerated locale. Force a locale that's always built into glibc so
-# the install output stays clean. setup.sh handles the proper fix
-# (running locale-gen for en_US.UTF-8).
-export LC_ALL=C.UTF-8 LANG=C.UTF-8
+is_macos() { [[ "$(uname -s)" == Darwin ]]; }
+
+# perl (used by stow) spams locale warnings if LANG points at an ungenerated
+# locale. Force one that always exists: glibc ships C.UTF-8; macOS/BSD libc
+# does not, but always ships en_US.UTF-8. setup.sh handles the proper Linux
+# fix (running locale-gen for en_US.UTF-8).
+if is_macos; then
+	export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+else
+	export LC_ALL=C.UTF-8 LANG=C.UTF-8
+fi
 
 if ! command -v stow &>/dev/null; then
 	echo "stow not found. Install GNU stow and rerun." >&2
@@ -17,12 +23,13 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Each entry is a stow package — its contents are symlinked into $HOME.
 # Note: getty@tty1 autologin override lives at /etc/systemd/system/... and
 # is sudo-installed by setup.sh, not stowed.
-STOW_DIRS=(
-	bin
-	firefox
+#
+# Split by OS. COMMON stows everywhere. LINUX_ONLY is the Wayland/GPU desktop
+# (niri, kanshi), the bin/ helper scripts (niri-screenshot, prime-run — both
+# Linux-only), and firefox (its XDG path is wrong on macOS, so the macOS branch
+# at the end links user.js into ~/Library instead of stowing the package).
+COMMON_DIRS=(
 	ghostty
-	kanshi
-	niri
 	nvim
 	prettier
 	ripgrep
@@ -30,6 +37,17 @@ STOW_DIRS=(
 	tmux
 	zsh
 )
+LINUX_ONLY_DIRS=(
+	bin
+	firefox
+	kanshi
+	niri
+)
+if is_macos; then
+	STOW_DIRS=("${COMMON_DIRS[@]}")
+else
+	STOW_DIRS=("${COMMON_DIRS[@]}" "${LINUX_ONLY_DIRS[@]}")
+fi
 
 echo "Installing dotfiles..."
 
@@ -45,5 +63,51 @@ popd >/dev/null
 # Claude Code config — patched rather than stowed since ~/.claude.json is
 # live-mutated by Claude itself.
 "$DOTFILES/claude/apply.sh"
+
+# macOS-only deployment for paths stow can't express (they live outside
+# ~/.config). Idempotent — safe to rerun.
+if is_macos; then
+	# Firefox: the firefox/ package mirrors the Linux XDG path
+	# (~/.config/mozilla/firefox), which macOS Firefox never reads. Symlink
+	# user.js into the real macOS profile dir instead. The profile hash is
+	# per-install, so locate the dev-edition profile at runtime.
+	ff_profiles="$HOME/Library/Application Support/Firefox/Profiles"
+	ff_src="$(find "$DOTFILES/firefox" -name user.js -print -quit 2>/dev/null || true)"
+	if [[ -z "$ff_src" ]]; then
+		echo "  firefox: no user.js in repo — skipping."
+	elif [[ ! -d "$ff_profiles" ]]; then
+		echo "  firefox: $ff_profiles missing — launch Firefox Developer Edition once, then rerun."
+	else
+		ff_prof="$(find "$ff_profiles" -maxdepth 1 -type d -name '*.dev-edition-default' -print -quit 2>/dev/null || true)"
+		if [[ -z "$ff_prof" ]]; then
+			echo "  firefox: no *.dev-edition-default profile yet — launch FDE once, then rerun."
+		else
+			# Back up a pre-existing real user.js (not our own symlink) so a
+			# hand-rolled one is never silently clobbered.
+			if [[ -e "$ff_prof/user.js" && ! -L "$ff_prof/user.js" ]]; then
+				mv "$ff_prof/user.js" "$ff_prof/user.js.bak.$(date +%s)"
+				echo "  firefox: backed up existing user.js → user.js.bak.*"
+			fi
+			ln -sfn "$ff_src" "$ff_prof/user.js"
+			echo "  firefox: linked user.js → $ff_prof/user.js"
+		fi
+	fi
+
+	# Ghostty: layer the macOS overrides (cmd-key idioms, native titlebar,
+	# quick-terminal rebind) on top of the shared base config. Ghostty reads
+	# the stowed ~/.config/ghostty/config first, then the Application Support
+	# config — so an include placed there loads last and wins, without editing
+	# the shared base config that Linux uses.
+	ghostty_app_dir="$HOME/Library/Application Support/com.mitchellh.ghostty"
+	ghostty_app_cfg="$ghostty_app_dir/config"
+	ghostty_include="config-file = $HOME/.config/ghostty/config-macos.conf"
+	mkdir -p "$ghostty_app_dir"
+	if ! grep -qF "$ghostty_include" "$ghostty_app_cfg" 2>/dev/null; then
+		printf '%s\n' "$ghostty_include" >> "$ghostty_app_cfg"
+		echo "  ghostty: enabled macOS override include in $ghostty_app_cfg"
+	else
+		echo "  ghostty: macOS override include already present."
+	fi
+fi
 
 echo "Dotfiles installed successfully!"

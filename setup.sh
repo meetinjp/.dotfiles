@@ -25,6 +25,18 @@ set -euo pipefail
 # already exists.
 # ---------------------------------------------------------------------------
 
+is_macos() { [[ "$(uname -s)" == Darwin ]]; }
+
+# Monotonic-ish timestamp for backup filenames. GNU date supports %N
+# (nanoseconds); BSD/macOS date does not and echoes a literal "N", so detect
+# that and fall back to whole seconds (the PID suffix still disambiguates).
+_ts() {
+	local t
+	t="$(date +%s%N 2>/dev/null)"
+	[[ -z "$t" || "$t" == *N* ]] && t="$(date +%s)"
+	printf '%s' "$t"
+}
+
 if ! command -v git &>/dev/null; then
 	echo "Git is not installed. Please install it first."
 	exit 1
@@ -91,7 +103,7 @@ gpg_keyid_for() {
 }
 
 echo "═════════════════════════════════════════════════════════════════"
-echo " .dotfiles setup (CachyOS bare-metal)"
+echo " .dotfiles setup ($(uname -s))"
 echo "═════════════════════════════════════════════════════════════════"
 
 # ---------------------------------------------------------------------------
@@ -109,7 +121,7 @@ render_template() {
 	local src="$1" dst="$2"
 	if [[ -f "$dst" ]]; then
 		# nanosecond precision + PID so rapid back-to-back renders never collide.
-		local bak="$dst.bak.$(date +%s%N).$$"
+		local bak="$dst.bak.$(_ts).$$"
 		cp -p "$dst" "$bak"
 		echo "  backed up existing $dst → $bak"
 	fi
@@ -131,7 +143,9 @@ banner "3/8  Locale (en_US.UTF-8)"
 # ---------------------------------------------------------------------------
 # Make sure en_US.UTF-8 is generated so perl, locale-aware libs, and Niri
 # don't spam warnings.
-if command -v locale-gen &>/dev/null && ! locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
+if is_macos; then
+	echo "  macOS ships en_US.UTF-8 prebuilt (no locale-gen) — skipping."
+elif command -v locale-gen &>/dev/null && ! locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
 	if confirm "Generate en_US.UTF-8? (needs sudo) [Y/n]"; then
 		if ! grep -q '^en_US\.UTF-8 UTF-8' /etc/locale.gen 2>/dev/null; then
 			echo 'en_US.UTF-8 UTF-8' | sudo tee -a /etc/locale.gen >/dev/null
@@ -156,9 +170,23 @@ banner "4/8  GPG key (sign + auth, used for both git signing and SSH)"
 # draws inline in the TTY and works regardless of session state, so we pin it
 # up-front. Idempotent. (~/.gnupg already prepared at top of script.)
 if ! grep -q '^pinentry-program' ~/.gnupg/gpg-agent.conf 2>/dev/null; then
-	echo 'pinentry-program /usr/bin/pinentry-curses' >> ~/.gnupg/gpg-agent.conf
-	echo "  pinned pinentry-program = /usr/bin/pinentry-curses (prevents dispatcher hang)"
-	gpgconf --kill gpg-agent 2>/dev/null || true
+	# Resolve the pinentry binary dynamically (honors the Homebrew prefix on
+	# macOS — /opt/homebrew or /usr/local — instead of a hardcoded /usr/bin).
+	# macOS prefers pinentry-mac (GUI, Keychain-aware); Linux uses
+	# pinentry-curses, which draws inline in the TTY and works regardless of
+	# graphical-session state (avoids the dispatcher hang on a fresh box).
+	if is_macos; then
+		PINENTRY="$(command -v pinentry-mac || command -v pinentry-curses || command -v pinentry || true)"
+	else
+		PINENTRY="$(command -v pinentry-curses || command -v pinentry || true)"
+	fi
+	if [[ -n "$PINENTRY" ]]; then
+		echo "pinentry-program $PINENTRY" >> ~/.gnupg/gpg-agent.conf
+		echo "  pinned pinentry-program = $PINENTRY"
+		gpgconf --kill gpg-agent 2>/dev/null || true
+	else
+		echo "  no pinentry found — install pinentry-mac (macOS) / pinentry (Linux) and rerun."
+	fi
 else
 	echo "  pinentry-program already set."
 fi
@@ -229,7 +257,40 @@ fi
 # ---------------------------------------------------------------------------
 banner "6/8  Caps Lock -> Ctrl (via keyd)"
 # ---------------------------------------------------------------------------
-if command -v keyd &>/dev/null; then
+if is_macos; then
+	# macOS has no keyd. Install a LaunchAgent that runs hidutil at login to
+	# remap Caps Lock (0x700000039) → Left Control (0x7000000E0). A hidutil
+	# mapping is lost on reboot, so RunAtLoad reapplies it every login.
+	CAPS_PLIST="$HOME/Library/LaunchAgents/com.dotfiles.capstocontrol.plist"
+	CAPS_MAP='{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}'
+	if [[ -f "$CAPS_PLIST" ]]; then
+		echo "  Caps→Ctrl LaunchAgent already installed."
+	elif confirm "Install Caps Lock → Control (hidutil LaunchAgent)? [Y/n]"; then
+		mkdir -p "$HOME/Library/LaunchAgents"
+		cat > "$CAPS_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.dotfiles.capstocontrol</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/hidutil</string>
+		<string>property</string>
+		<string>--set</string>
+		<string>$CAPS_MAP</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+</dict>
+</plist>
+PLIST
+		launchctl bootstrap "gui/$(id -u)" "$CAPS_PLIST" 2>/dev/null || true
+		/usr/bin/hidutil property --set "$CAPS_MAP" >/dev/null 2>&1 || true
+		echo "  installed Caps→Ctrl LaunchAgent + applied for this session."
+	fi
+elif command -v keyd &>/dev/null; then
 	KEYD_CONFIG=/etc/keyd/default.conf
 	if [[ -f "$KEYD_CONFIG" ]]; then
 		if grep -Eq '^[[:space:]]*capslock[[:space:]]*=[[:space:]]*leftcontrol' "$KEYD_CONFIG"; then
@@ -264,6 +325,10 @@ banner "7/8  Autologin to tty1 (boots straight into zsh → niri-session)"
 # live Wayland session. One fewer moving part than greetd; if niri crashes,
 # you land on a zsh prompt at tty1 and can poke around.
 
+if is_macos; then
+	echo "  macOS uses loginwindow/WindowServer, not getty/niri — skipping."
+	echo "  (Set autologin in System Settings > Users & Groups if you want it.)"
+else
 CURRENT_USER="$(id -un)"
 OVERRIDE_DIR=/etc/systemd/system/getty@tty1.service.d
 OVERRIDE_FILE="$OVERRIDE_DIR/autologin.conf"
@@ -301,6 +366,7 @@ EOF
 		echo "  wrote $OVERRIDE_FILE (autologin user = $CURRENT_USER)"
 	fi
 fi
+fi
 
 # ---------------------------------------------------------------------------
 banner "8/8  systemd-oomd (kill runaway agents before swap death-spiral)"
@@ -308,6 +374,9 @@ banner "8/8  systemd-oomd (kill runaway agents before swap death-spiral)"
 # Without oomd: one Claude/agent eats all RAM → kernel OOM-killer fires
 # randomly, often kills the WM and tanks the session. With oomd: the
 # specific cgroup is killed under memory pressure, rest of session lives.
+if is_macos; then
+	echo "  no systemd-oomd on macOS (jetsam/memorystatus handles pressure) — skipping."
+else
 OOMD_DROPIN_DIR=/etc/systemd/system/user@.service.d
 OOMD_DROPIN_FILE="$OOMD_DROPIN_DIR/10-oomd.conf"
 OOMD_UNIT=/usr/lib/systemd/system/systemd-oomd.service
@@ -339,6 +408,7 @@ EOF
 		echo "  wrote $OOMD_DROPIN_FILE"
 	fi
 fi
+fi
 
 # ---------------------------------------------------------------------------
 echo
@@ -366,8 +436,14 @@ if [[ -n "${KEYID:-}" ]]; then
 fi
 
 echo
-echo "$STEP. Switch your shell to zsh (CachyOS defaults to fish):"
-echo "   chsh -s /bin/zsh"
+if is_macos; then
+	echo "$STEP. zsh is already the default shell on macOS (Catalina+). To use"
+	echo "   Homebrew's newer zsh instead of Apple's /bin/zsh, register it first:"
+	echo "   echo \"\$(brew --prefix)/bin/zsh\" | sudo tee -a /etc/shells && chsh -s \"\$(brew --prefix)/bin/zsh\""
+else
+	echo "$STEP. Switch your shell to zsh (CachyOS defaults to fish):"
+	echo "   chsh -s /bin/zsh"
+fi
 STEP=$((STEP + 1))
 
 echo
@@ -376,15 +452,28 @@ echo "   ssh -T git@github.com"
 STEP=$((STEP + 1))
 
 echo
-echo "$STEP. Reboot to land in niri (tty1 autologin → niri-session):"
-echo "   sudo systemctl reboot"
-STEP=$((STEP + 1))
+if is_macos; then
+	echo "$STEP. Restart to apply the Caps→Ctrl LaunchAgent + shell change:"
+	echo "   sudo shutdown -r now      # or just log out / back in"
+	STEP=$((STEP + 1))
 
-echo
-echo "$STEP. After login, sanity-check the stack:"
-echo "   niri msg version          # niri up"
-echo "   ghostty --version         # terminal up"
-echo "   prime-run glxinfo | grep 'OpenGL renderer'   # should say NVIDIA"
-echo "   glxinfo | grep 'OpenGL renderer'             # should say AMD (iGPU)"
+	echo
+	echo "$STEP. After login, sanity-check the stack:"
+	echo "   ghostty --version                                   # terminal up"
+	echo "   gpg --version && gpgconf --list-dirs agent-ssh-socket   # gpg-ssh"
+	echo "   system_profiler SPDisplaysDataType | grep Chipset   # GPU"
+	echo "   xcode-select -p                                     # Xcode toolchain path"
+else
+	echo "$STEP. Reboot to land in niri (tty1 autologin → niri-session):"
+	echo "   sudo systemctl reboot"
+	STEP=$((STEP + 1))
+
+	echo
+	echo "$STEP. After login, sanity-check the stack:"
+	echo "   niri msg version          # niri up"
+	echo "   ghostty --version         # terminal up"
+	echo "   prime-run glxinfo | grep 'OpenGL renderer'   # should say NVIDIA"
+	echo "   glxinfo | grep 'OpenGL renderer'             # should say AMD (iGPU)"
+fi
 
 echo

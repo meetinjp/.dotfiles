@@ -1,6 +1,7 @@
-# zsh — bare config (no Oh-My-Zsh), starship prompt.
-# Plugins installed via pacman:
-#   sudo pacman -S starship zsh-autosuggestions zsh-syntax-highlighting
+# zsh — bare config (no Oh-My-Zsh), starship prompt. Cross-platform: Linux
+# (CachyOS/pacman) and macOS (Homebrew). Plugins:
+#   Linux: sudo pacman -S starship zsh-autosuggestions zsh-syntax-highlighting
+#   macOS: brew install     starship zsh-autosuggestions zsh-syntax-highlighting
 
 # vi mode (zsh builtin)
 bindkey -v
@@ -27,11 +28,19 @@ autoload -Uz compinit && compinit
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-# Plugins (sourced directly; no framework).
-# zsh-syntax-highlighting must come last per upstream docs.
+# Plugins (sourced directly; no framework). Candidate paths cover pacman
+# (/usr/share/zsh/plugins) and Homebrew ($HOMEBREW_PREFIX/share, with
+# /opt/homebrew and /usr/local fallbacks for Apple Silicon / Intel). The
+# `[[ -r ]]` guard makes the per-OS-unused entries harmless. Order matters:
+# all autosuggestions candidates precede all syntax-highlighting candidates,
+# because zsh-syntax-highlighting must be sourced last per upstream docs.
 for _plugin in \
     /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh \
-    /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+    "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+    /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
+    /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 do
     [[ -r "$_plugin" ]] && source "$_plugin"
 done
@@ -47,15 +56,25 @@ export GIT_EDITOR="nvim"
 
 # Default browser — also set as the system-wide default-web-browser via
 # xdg-settings; this env var covers CLI tools that read $BROWSER (gh, man,
-# etc.) instead of going through xdg-open.
-export BROWSER="firefox-developer-edition"
+# etc.) instead of going through xdg-open. macOS has no such command on PATH
+# and apps launch via `open`, so leave $BROWSER unset there (a multi-word
+# "open -a ..." value breaks tools that exec $BROWSER as a single argv).
+[[ "$OSTYPE" != darwin* ]] && export BROWSER="firefox-developer-edition"
 
-# Aliases
+# Aliases. eza is the ls replacement (pacman/brew); guard so the shell stays
+# usable on a fresh box before `eza` is installed (e.g. new macOS pre-brew) —
+# bare `ls` must not turn into "command not found: eza".
 alias v="nvim ."
-alias ls="eza"
-alias ll="eza -la"
-alias la="eza -a"
-alias lt="eza --tree --level=2"
+if command -v eza >/dev/null; then
+    alias ls="eza"
+    alias ll="eza -la"
+    alias la="eza -a"
+    alias lt="eza --tree --level=2"
+else
+    alias ll="ls -la"
+    alias la="ls -a"
+    alias lt="ls -R"   # no tree view without eza; -R is the closest builtin
+fi
 
 # PATH
 export PATH="$HOME/.local/bin:$PATH"
@@ -74,11 +93,17 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
 
-# pnpm
-export PNPM_HOME="$HOME/.local/share/pnpm"
+# pnpm — `pnpm setup` writes PNPM_HOME; its default differs by OS
+# (~/.local/share/pnpm on Linux, ~/Library/pnpm on macOS). The global bin shims
+# live under $PNPM_HOME/bin (confirmed via `pnpm bin -g`), so PATH needs /bin.
+if [[ "$OSTYPE" == darwin* ]]; then
+    export PNPM_HOME="$HOME/Library/pnpm"
+else
+    export PNPM_HOME="$HOME/.local/share/pnpm"
+fi
 case ":$PATH:" in
-    *":$PNPM_HOME:"*) ;;
-    *) export PATH="$PNPM_HOME:$PATH" ;;
+    *":$PNPM_HOME/bin:"*) ;;
+    *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 
 # Claude Code binary — only export if installed.
@@ -97,11 +122,3 @@ fi
 
 # Per-host overrides (gitignored).
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
-
-# pnpm
-export PNPM_HOME="/home/meetinjp/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end

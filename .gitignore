@@ -19,6 +19,10 @@ Thumbs.db
 .envrc.local
 .envrc
 
+# Ghostty per-host override (the `?config.local` optional include). The macOS
+# override (config-macos.conf) IS tracked; this host-local one is not.
+ghostty/.config/ghostty/config.local
+
 # Rendered configs (built by setup.sh from *.template files) — they
 # contain personal identity (git emails) so they must never land in the
 # public repo.

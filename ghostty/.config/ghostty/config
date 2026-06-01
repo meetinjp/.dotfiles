@@ -25,12 +25,14 @@ window-padding-y = 0
 window-padding-balance = true
 
 # Compact tab strip — merge titlebar + tabs into one thin strip, flat
-# (no shadow), tabs only as wide as content, and hide the strip entirely
-# when the window is maximized/fullscreen (ws1/ws2 case).
+# (no shadow), tabs only as wide as content. Keep the strip visible when
+# maximized: niri tiles windows as "maximized" to GTK, so hiding-when-
+# maximized would hide tabs in normal tiled windows (only F11 fullscreen
+# would show them, which also covers the niri bar).
 gtk-titlebar-style = tabs
 gtk-toolbar-style = flat
 gtk-wide-tabs = false
-gtk-titlebar-hide-when-maximized = true
+gtk-titlebar-hide-when-maximized = false
 window-save-state = always
 window-theme = ghostty
 background-opacity = 1.0
@@ -120,4 +122,7 @@ keybind = f11=toggle_fullscreen
 
 # ─── Optional per-host overrides ─────────────────────────────────────────────
 # `?` prefix makes the include optional (no error if file is missing).
+# macOS override layer (config-macos.conf) is NOT included here — it's pulled in
+# only on macOS via ~/Library/Application Support/com.mitchellh.ghostty/config,
+# which install.sh writes. The gtk-*/linux-* keys above are ignored on macOS.
 config-file = ?config.local

@@ -154,6 +154,47 @@ replaces zsh, when niri exits the login shell is gone too — getty
 re-spawns and autologin re-fires, so niri restarts automatically.
 For an emergency shell switch to tty2..tty6 (`Ctrl+Alt+F2..F6`).
 
+## macOS (Xcode box)
+
+The CLI/dev half of this repo is cross-platform. The Linux **desktop** —
+niri, kanshi, wlsunset, Noctalia, the Win11 KVM VM, Nvidia `prime-run` — has
+no macOS equivalent and is intentionally skipped there; macOS ships native
+screenshots, display arrangement, and GPU management. `install.sh` and
+`setup.sh` branch on `uname`, so the same scripts run on both OSes.
+
+```sh
+# 1. Xcode toolchain + Homebrew
+xcode-select --install                       # Command Line Tools (git, clang)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 2. Packages (the pacman-list analog). bun/nvm/uv self-install (see Brewfile).
+brew bundle --file=~/.dotfiles/Brewfile
+curl -fsSL https://bun.sh/install | bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 3. Clone + stow + identity (same entrypoints as Linux)
+git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
+~/.dotfiles/install.sh                        # stows the common packages only
+GIT_NAME=… GIT_EMAIL=… ~/.dotfiles/setup.sh   # GPG/SSH; skips keyd/getty/oomd
+```
+
+What the macOS branches do differently:
+
+| Concern        | Linux                          | macOS                                                        |
+| -------------- | ------------------------------ | ------------------------------------------------------------ |
+| Packages       | pacman / paru                  | Homebrew (`Brewfile`); `/opt/homebrew` `shellenv` in zprofile |
+| zsh plugins    | `/usr/share/zsh/plugins`       | `$HOMEBREW_PREFIX/share` (probed in `.zshrc`)                |
+| SSH auth       | gpg-agent (`gpgconf` socket)   | **same** — gpg-agent parity, `pinentry-mac` auto-pinned       |
+| Caps → Ctrl    | keyd (`/etc/keyd`)             | `hidutil` LaunchAgent (`~/Library/LaunchAgents`)             |
+| Firefox `user.js` | stowed to `~/.config`       | symlinked into `~/Library/Application Support/Firefox`       |
+| Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
+| Desktop / VM   | niri, kanshi, prime-run, KVM   | skipped — use native macOS                                   |
+
+zsh is already the default shell on macOS (Catalina+), so step 4's `chsh`
+is usually unnecessary. Grant Ghostty Accessibility permission for the
+quick-terminal global hotkey to fire.
+
 ## SSH-over-GPG (one key for everything)
 
 `setup.sh` provisions a single Ed25519 GPG key that does both jobs:
