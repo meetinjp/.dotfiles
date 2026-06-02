@@ -10,7 +10,7 @@ set -euo pipefail
 #   3. Generates the en_US.UTF-8 locale on hosts that lack it.
 #   4. Generates (or detects) an Ed25519 GPG key with sign + auth subkeys.
 #   5. Configures gpg-agent to serve the auth subkey as an ssh-agent.
-#   6. Installs a Caps Lock -> Ctrl remap via keyd.
+#   6. Remaps Caps Lock: Ctrl on Linux (keyd), Cmd on macOS (hidutil).
 #   7. Disables any existing display manager + installs a getty@tty1
 #      autologin drop-in. zsh's .zprofile takes over and execs niri-session.
 #   8. Enables systemd-oomd with a user@.service drop-in so runaway
@@ -255,17 +255,19 @@ if [[ -n "${KEYID:-}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-banner "6/8  Caps Lock -> Ctrl (via keyd)"
+banner "6/8  Caps Lock remap (Linux: Ctrl via keyd / macOS: Cmd via hidutil)"
 # ---------------------------------------------------------------------------
 if is_macos; then
 	# macOS has no keyd. Install a LaunchAgent that runs hidutil at login to
-	# remap Caps Lock (0x700000039) → Left Control (0x7000000E0). A hidutil
-	# mapping is lost on reboot, so RunAtLoad reapplies it every login.
-	CAPS_PLIST="$HOME/Library/LaunchAgents/com.dotfiles.capstocontrol.plist"
-	CAPS_MAP='{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}'
+	# remap Caps Lock (0x700000039) → Left Command (0x7000000E3). Cmd is the
+	# primary shortcut modifier on macOS, so caps→Cmd mirrors the caps→Ctrl
+	# ergonomics used on Linux. A hidutil mapping is lost on reboot, so
+	# RunAtLoad reapplies it every login.
+	CAPS_PLIST="$HOME/Library/LaunchAgents/com.dotfiles.capstocommand.plist"
+	CAPS_MAP='{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E3}]}'
 	if [[ -f "$CAPS_PLIST" ]]; then
-		echo "  Caps→Ctrl LaunchAgent already installed."
-	elif confirm "Install Caps Lock → Control (hidutil LaunchAgent)? [Y/n]"; then
+		echo "  Caps→Cmd LaunchAgent already installed."
+	elif confirm "Install Caps Lock → Command (hidutil LaunchAgent)? [Y/n]"; then
 		mkdir -p "$HOME/Library/LaunchAgents"
 		cat > "$CAPS_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -273,7 +275,7 @@ if is_macos; then
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.dotfiles.capstocontrol</string>
+	<string>com.dotfiles.capstocommand</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/bin/hidutil</string>
@@ -288,7 +290,7 @@ if is_macos; then
 PLIST
 		launchctl bootstrap "gui/$(id -u)" "$CAPS_PLIST" 2>/dev/null || true
 		/usr/bin/hidutil property --set "$CAPS_MAP" >/dev/null 2>&1 || true
-		echo "  installed Caps→Ctrl LaunchAgent + applied for this session."
+		echo "  installed Caps→Cmd LaunchAgent + applied for this session."
 	fi
 elif command -v keyd &>/dev/null; then
 	KEYD_CONFIG=/etc/keyd/default.conf
@@ -455,7 +457,7 @@ STEP=$((STEP + 1))
 
 echo
 if is_macos; then
-	echo "$STEP. Restart to apply the Caps→Ctrl LaunchAgent + shell change:"
+	echo "$STEP. Restart to apply the Caps→Cmd LaunchAgent + shell change:"
 	echo "   sudo shutdown -r now      # or just log out / back in"
 	STEP=$((STEP + 1))
 
