@@ -207,13 +207,18 @@ What the macOS branches do differently:
 | Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
 | Desktop / VM   | niri, kanshi, prime-run, KVM   | skipped — use native macOS                                   |
 
-zsh is already the default shell on macOS (Catalina+), so no `chsh` is needed
-to *use* zsh. To run Homebrew's newer zsh instead of Apple's `/bin/zsh`:
+zsh is already the default shell on macOS (Catalina+), and Apple's `/bin/zsh`
+is fine. Homebrew's zsh is **not** in the `Brewfile`, so switch to it only if
+you `brew install zsh` **first** — otherwise `chsh` points your login shell at
+a missing binary and the shell breaks on the next login:
 
 ```sh
+brew install zsh                                   # REQUIRED first — not in the Brewfile
 echo "$(brew --prefix)/bin/zsh" | sudo tee -a /etc/shells
 chsh -s "$(brew --prefix)/bin/zsh"
 ```
+
+Broke your shell this way? Recover with `chsh -s /bin/zsh`.
 
 Grant Ghostty Accessibility permission for the quick-terminal global hotkey to
 fire (System Settings → Privacy & Security → Accessibility).
@@ -421,6 +426,10 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
 - **macOS — no syntax highlighting / missing `node`, `eza`, etc.**: `brew bundle`
   was never run. `~/.dotfiles/install.sh` now does it automatically; or run
   `brew bundle --file=~/.dotfiles/Brewfile` directly.
+- **macOS — shell broken after switching to Homebrew zsh** (login falls back or
+  errors): you ran `chsh -s "$(brew --prefix)/bin/zsh"` without `brew install
+  zsh` first, so the login shell points at a nonexistent binary. Recover with
+  `chsh -s /bin/zsh` (Apple's system zsh, always present).
 - `existing target is not owned by stow`: `unlink` (or `rm`) the target
   and rerun `install.sh`.
 - `Permission denied (publickey)` on `git push`: confirm `SSH_AUTH_SOCK`

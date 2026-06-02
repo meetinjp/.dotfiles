@@ -437,9 +437,11 @@ fi
 
 echo
 if is_macos; then
-	echo "$STEP. zsh is already the default shell on macOS (Catalina+). To use"
-	echo "   Homebrew's newer zsh instead of Apple's /bin/zsh, register it first:"
-	echo "   echo \"\$(brew --prefix)/bin/zsh\" | sudo tee -a /etc/shells && chsh -s \"\$(brew --prefix)/bin/zsh\""
+	echo "$STEP. zsh is already default on macOS (Catalina+); Apple's /bin/zsh is"
+	echo "   fine. Homebrew's zsh is NOT in the Brewfile — install it BEFORE chsh,"
+	echo "   else the login shell points at a missing binary and breaks on reboot"
+	echo "   (recover with: chsh -s /bin/zsh):"
+	echo "   brew install zsh && echo \"\$(brew --prefix)/bin/zsh\" | sudo tee -a /etc/shells && chsh -s \"\$(brew --prefix)/bin/zsh\""
 else
 	echo "$STEP. Switch your shell to zsh (CachyOS defaults to fish):"
 	echo "   chsh -s /bin/zsh"
