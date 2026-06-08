@@ -137,7 +137,7 @@ defaults in non-interactive runs.
 3. Generates `en_US.UTF-8` locale.
 4. Generates an Ed25519 GPG key with sign + auth subkeys.
 5. Configures gpg-agent to serve the auth subkey as an ssh-agent.
-6. Installs `/etc/keyd/default.conf` with Caps Lock → Ctrl, enables keyd.
+6. Remaps Caps Lock — Ctrl on Linux (`/etc/keyd/default.conf` + keyd), Cmd on macOS (`hidutil` LaunchAgent).
 7. Disables any existing display manager + installs a `getty@tty1`
    autologin drop-in for this user. zsh's `.zprofile` then execs
    `niri --session` on tty1 when no Wayland session is up.
@@ -202,7 +202,7 @@ What the macOS branches do differently:
 | Packages       | pacman / paru                  | Homebrew (`Brewfile`); `brew shellenv` probes `/opt/homebrew` + `/usr/local` |
 | zsh plugins    | `/usr/share/zsh/plugins`       | `$HOMEBREW_PREFIX/share` (probed in `.zshrc`)                |
 | SSH auth       | gpg-agent (`gpgconf` socket)   | **same** — gpg-agent parity, `pinentry-mac` auto-pinned       |
-| Caps → Ctrl    | keyd (`/etc/keyd`)             | `hidutil` LaunchAgent (`~/Library/LaunchAgents`)             |
+| Caps Lock      | keyd (`/etc/keyd`) → **Ctrl**  | `hidutil` LaunchAgent (`~/Library/LaunchAgents`) → **Cmd**   |
 | Firefox `user.js` | stowed to `~/.config`       | symlinked into `~/Library/Application Support/Firefox`       |
 | Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
 | Desktop / VM   | niri, kanshi, prime-run, KVM   | skipped — use native macOS                                   |
