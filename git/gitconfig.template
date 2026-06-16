@@ -9,8 +9,4 @@
 [tag]
 	gpgSign = true
 
-# Repos cloned under ~/work/lunar/ auto-switch to the work email.
-# Everything outside that tree is assumed personal. Match is
-# case-insensitive (gitdir/i:) so accidental ~/Work/Lunar/ still routes.
-[includeIf "gitdir/i:~/work/lunar/"]
-	path = ~/.gitconfig-work
+# Personal identity is the default everywhere (work-email auto-switch removed).
