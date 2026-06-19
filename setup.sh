@@ -11,11 +11,14 @@ set -euo pipefail
 #   4. Generates (or detects) an Ed25519 GPG key with sign + auth subkeys.
 #   5. Configures gpg-agent to serve the auth subkey as an ssh-agent.
 #   6. Remaps Caps Lock: Ctrl on Linux (keyd), Cmd on macOS (hidutil).
-#   7. Disables any existing display manager + installs a getty@tty1
-#      autologin drop-in. zsh's .zprofile takes over and execs niri-session.
-#   8. Enables systemd-oomd with a user@.service drop-in so runaway
+#   7. TUXEDO hardware (Linux): installs tuxedo-drivers + tuxedo-rs (tailord)
+#      for keyboard backlight / fan control, and a battery charge-limit unit.
+#   8. Sets the login shell to zsh, disables any display manager, installs a
+#      getty@tty1 autologin drop-in, and silences the CachyOS fish greeting.
+#      zsh's .zprofile then execs niri --session on tty1.
+#   9. Enables systemd-oomd with a user@.service drop-in so runaway
 #      multi-agent workloads get surgically killed before swap death-spiral.
-#   9. Prints the public keys + a checklist of what to do next.
+#  10. Prints the public keys + a checklist of what to do next.
 #
 # Apps deliberately NOT touched here: music player (install/pick at will,
 # not part of the dotfile contract), browsers beyond firefox-developer-edition,
@@ -107,7 +110,7 @@ echo " .dotfiles setup ($(uname -s))"
 echo "═════════════════════════════════════════════════════════════════"
 
 # ---------------------------------------------------------------------------
-banner "1/8  Identity"
+banner "1/9  Identity"
 # ---------------------------------------------------------------------------
 echo "Set via env vars to skip prompts: GIT_NAME, GIT_EMAIL, GIT_WORK_EMAIL."
 prompt_var GIT_NAME       "git name    (e.g. meetinjp)"
@@ -115,7 +118,7 @@ prompt_var GIT_EMAIL      "git personal email"
 prompt_var GIT_WORK_EMAIL "git work email  (leave blank to skip)"
 
 # ---------------------------------------------------------------------------
-banner "2/8  Render config templates"
+banner "2/9  Render config templates"
 # ---------------------------------------------------------------------------
 render_template() {
 	local src="$1" dst="$2"
@@ -139,7 +142,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-banner "3/8  Locale (en_US.UTF-8)"
+banner "3/9  Locale (en_US.UTF-8)"
 # ---------------------------------------------------------------------------
 # Make sure en_US.UTF-8 is generated so perl, locale-aware libs, and Niri
 # don't spam warnings.
@@ -161,7 +164,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-banner "4/8  GPG key (sign + auth, used for both git signing and SSH)"
+banner "4/9  GPG key (sign + auth, used for both git signing and SSH)"
 # ---------------------------------------------------------------------------
 # Stage gpg-agent BEFORE we try to use it. On a fresh box without a populated
 # graphical session, /usr/bin/pinentry's dispatcher can hang silently when
@@ -223,7 +226,7 @@ if [[ -n "${KEYID:-}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-banner "5/8  SSH-over-GPG (gpg-agent serves the auth subkey)"
+banner "5/9  SSH-over-GPG (gpg-agent serves the auth subkey)"
 # ---------------------------------------------------------------------------
 AUTH_KEYGRIP=""
 if [[ -n "${KEYID:-}" ]]; then
@@ -255,7 +258,7 @@ if [[ -n "${KEYID:-}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-banner "6/8  Caps Lock remap (Linux: Ctrl via keyd / macOS: Cmd via hidutil)"
+banner "6/9  Caps Lock remap (Linux: Ctrl via keyd / macOS: Cmd via hidutil)"
 # ---------------------------------------------------------------------------
 if is_macos; then
 	# macOS has no keyd. Install a LaunchAgent that runs hidutil at login to
@@ -320,7 +323,134 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-banner "7/8  Autologin to tty1 (boots straight into zsh → niri-session)"
+banner "7/9  TUXEDO hardware (drivers + fan/charge control)"
+# ---------------------------------------------------------------------------
+# TUXEDO laptops need out-of-tree bits that Tuxedo OS preinstalls but a vanilla
+# Arch/CachyOS box does not:
+#   - tuxedo-drivers-dkms: kernel modules for the white keyboard backlight
+#     (LED class white:kbd_backlight), fan/thermal control, the tuxedo_io
+#     control interface, and the battery charge-limit sysfs. DKMS rebuilds
+#     against every installed kernel's headers on each kernel update.
+#   - tuxedo-rs (tailord daemon + tailor-gui GTK app): lightweight fan-curve /
+#     profile control. Chosen over Tuxedo Control Center (Electron + tccd) — it
+#     is native GTK4 and does NOT fight power-profiles-daemon over the CPU
+#     governor. After the first install, REBOOT once so the platform modules
+#     bind cleanly (tuxedo-drivers blacklists the in-tree uniwill_laptop module).
+# Skipped on macOS and on non-TUXEDO hardware.
+if is_macos; then
+	echo "  macOS — no TUXEDO drivers. Skipping."
+elif [[ "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)" != *TUXEDO* ]]; then
+	echo "  not a TUXEDO machine (sys_vendor != TUXEDO) — skipping."
+elif ! command -v paru &>/dev/null; then
+	echo "  paru (AUR helper) not found — skipping. Install it, then rerun, or:"
+	echo "    paru -S --needed tuxedo-drivers-dkms tailord tailor-gui"
+else
+	TUXEDO_PKGS=(tuxedo-drivers-dkms tailord tailor-gui)
+	# Wired 2.5G Ethernet (Motorcomm YT6801) has an in-tree driver on recent
+	# kernels but it is MISSING from linux-cachyos-lts — add the DKMS module so
+	# Ethernet also works when booting the LTS fallback kernel.
+	if pacman -Qq linux-cachyos-lts &>/dev/null \
+	   && confirm "Also install tuxedo-yt6801-dkms-git? (wired 2.5G Ethernet on the LTS kernel) [Y/n]"; then
+		TUXEDO_PKGS+=(tuxedo-yt6801-dkms-git)
+	fi
+	# Building tailor-gui compiles Rust. CachyOS ships `rustup` with NO default
+	# toolchain, so `rustc` is a proxy that errors and meson aborts with
+	# "Unknown compiler(s): [['rustc']]". Select a default if one isn't set.
+	if command -v rustup &>/dev/null && ! rustup default &>/dev/null; then
+		if confirm "rustup has no default toolchain (tailor-gui won't build) — set 'stable'? [Y/n]"; then
+			rustup default stable
+		fi
+	fi
+	if confirm "Install TUXEDO packages via paru: ${TUXEDO_PKGS[*]}? [Y/n]"; then
+		paru -S --needed "${TUXEDO_PKGS[@]}"
+	fi
+
+	# tailord: fan/profile daemon. Enable so fan control is active at boot.
+	if [[ -f /usr/lib/systemd/system/tailord.service ]] \
+	   && ! systemctl is-enabled --quiet tailord.service 2>/dev/null; then
+		if confirm "Enable tailord.service (fan-control daemon)? (needs sudo) [Y/n]"; then
+			sudo systemctl enable --now tailord.service
+			echo "  tailord enabled."
+		fi
+	fi
+
+	# Predefined fan presets (quiet / balanced / performance) → /etc/tailord so
+	# they show up in tailor_gui's profile list. Copies only our presets; never
+	# touches the shipped default.json. Re-runnable (overwrites our own files).
+	if [[ -d "$DOTFILES/tailord" ]] && command -v tailord &>/dev/null; then
+		if confirm "Install fan presets (quiet/balanced/performance, balanced default)? (needs sudo) [Y/n]"; then
+			sudo install -d -m 755 /etc/tailord/fan /etc/tailord/profiles
+			sudo cp "$DOTFILES"/tailord/fan/*.json      /etc/tailord/fan/
+			sudo cp "$DOTFILES"/tailord/profiles/*.json /etc/tailord/profiles/
+			# Make 'balanced' the active/default profile (repoint BEFORE removing
+			# default so active_profile.json never dangles), then drop tuxedo-rs's
+			# shipped 'default' so only the three named levels show in tailor_gui.
+			sudo ln -sfn profiles/balanced.json /etc/tailord/active_profile.json
+			sudo rm -f /etc/tailord/profiles/default.json /etc/tailord/fan/default.json
+			sudo systemctl try-restart tailord.service 2>/dev/null || true
+			echo "  fan presets installed (active: balanced)."
+		fi
+	fi
+
+	# Keyboard backlight OFF by default. The backlight (Fn+Space) has no
+	# default-state module param, so a udev rule sets the LED to 0 when it
+	# appears at boot, before login, so it never comes up lit.
+	KBD_RULE=/etc/udev/rules.d/99-kbd-backlight-off.rules
+	if sudo test -f "$KBD_RULE" 2>/dev/null; then
+		echo "  kbd-backlight-off udev rule already present."
+	elif confirm "Default the keyboard backlight to OFF at boot? (needs sudo) [Y/n]"; then
+		sudo install -m 644 "$DOTFILES/udev/99-kbd-backlight-off.rules" "$KBD_RULE"
+		sudo udevadm control --reload
+		brightnessctl -d white:kbd_backlight set 0 >/dev/null 2>&1 || true
+		echo "  keyboard backlight will default to off at boot."
+	fi
+
+	# Battery charge limit (longevity). The released tailord (0.2.5) can't set
+	# this from its GUI yet, so persist it via a tiny systemd oneshot. TUXEDO
+	# boards expose one of two knobs (both only after tuxedo-drivers loads):
+	#   - numeric  .../charge_control_end_threshold        (write a percent, 80)
+	#   - Uniwill  .../charging_profile/charging_profile    named profiles:
+	#     high_capacity (100%) / balanced (~90%) / stationary (~80%)
+	# The InfinityBook Pro 14 AMD Gen10 uses the profile knob. Detect whichever
+	# exists; if neither (e.g. before the post-install reboot), hint and move on.
+	CHARGE_PATH=""; CHARGE_VAL=""
+	for c in /sys/class/power_supply/BAT0/charge_control_end_threshold \
+	         /sys/class/power_supply/BAT1/charge_control_end_threshold; do
+		[[ -w "$c" ]] && { CHARGE_PATH="$c"; CHARGE_VAL="80"; break; }
+	done
+	if [[ -z "$CHARGE_PATH" ]]; then
+		CP=/sys/devices/platform/tuxedo_keyboard/charging_profile/charging_profile
+		if [[ -w "$CP" ]] && grep -qw stationary "${CP%/*}/charging_profiles_available" 2>/dev/null; then
+			CHARGE_PATH="$CP"; CHARGE_VAL="stationary"   # ~80% ceiling
+		fi
+	fi
+	CHARGE_UNIT=/etc/systemd/system/battery-charge-limit.service
+	if sudo test -f "$CHARGE_UNIT" 2>/dev/null; then
+		echo "  battery-charge-limit.service already installed."
+	elif [[ -z "$CHARGE_PATH" ]]; then
+		echo "  charge-limit sysfs not present yet (tuxedo-drivers not loaded?)."
+		echo "  REBOOT after the driver install, then rerun setup.sh to set the cap."
+	elif confirm "Cap battery charge for longevity (set '$CHARGE_VAL')? (needs sudo) [Y/n]"; then
+		sudo tee "$CHARGE_UNIT" >/dev/null <<EOF
+[Unit]
+Description=Cap battery charge for longevity (TUXEDO)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo $CHARGE_VAL > $CHARGE_PATH'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+		sudo systemctl daemon-reload
+		sudo systemctl enable --now battery-charge-limit.service
+		echo "  charge limit set: $CHARGE_VAL -> $CHARGE_PATH (persisted)."
+	fi
+fi
+
+# ---------------------------------------------------------------------------
+banner "8/9  Login shell (zsh) + autologin to tty1 → niri-session"
 # ---------------------------------------------------------------------------
 # No display manager: getty@tty1 autologins this user via a systemd drop-in.
 # zsh's .zprofile (stowed) then execs niri-session when it sees tty1 + no
@@ -332,6 +462,43 @@ if is_macos; then
 	echo "  (Set autologin in System Settings > Users & Groups if you want it.)"
 else
 CURRENT_USER="$(id -un)"
+# `|| true`: under set -e a getpwnam miss (NSS/LDAP-only or odd container user)
+# would otherwise abort the whole script here.
+CURRENT_SHELL="$(getent passwd "$CURRENT_USER" | cut -d: -f7 || true)"
+
+# The whole tty1 → niri handoff lives in zsh's .zprofile; fish (the CachyOS
+# default login shell) never sources it, so a fish login shell boots to a bare
+# prompt + the CachyOS fastfetch greeting instead of niri. Make zsh the login
+# shell so the very first reboot lands in niri. chsh prompts for THIS user's
+# password (not sudo) and takes effect at next login.
+ZSH_BIN="$(command -v zsh || true)"
+# Compare by basename: passwd stores /bin/zsh but `command -v` yields
+# /usr/bin/zsh (the usrmerge symlink), so a full-path equality test would never
+# match and we'd re-prompt chsh on every run.
+if [[ -z "$ZSH_BIN" ]]; then
+	echo "  zsh not installed — skipping chsh (install zsh, then rerun)."
+elif [[ "${CURRENT_SHELL##*/}" == zsh ]]; then
+	echo "  login shell already zsh ($CURRENT_SHELL)."
+elif confirm "Set login shell to zsh ($ZSH_BIN)? (prompts for your password) [Y/n]"; then
+	# chsh refuses a shell that isn't listed in /etc/shells.
+	grep -qxF "$ZSH_BIN" /etc/shells 2>/dev/null || echo "$ZSH_BIN" | sudo tee -a /etc/shells >/dev/null
+	if chsh -s "$ZSH_BIN"; then
+		echo "  login shell set to $ZSH_BIN (applies at next login)."
+	else
+		echo "  chsh FAILED — set it by hand: chsh -s \"$ZSH_BIN\"" >&2
+	fi
+fi
+
+# Silence the CachyOS fish fastfetch greeting — belt-and-suspenders so that if
+# you ever do land in fish (a subshell, or before the chsh above), it isn't the
+# "bad UI". config.fish sources the CachyOS config (which sets fish_greeting to
+# fastfetch) first, so a no-op redefinition appended at the end wins. Idempotent.
+FISH_CFG="$HOME/.config/fish/config.fish"
+if [[ -f "$FISH_CFG" ]] && ! grep -q 'function fish_greeting; *end' "$FISH_CFG"; then
+	printf '\n# silence CachyOS fastfetch greeting (added by .dotfiles setup.sh)\nfunction fish_greeting; end\n' >> "$FISH_CFG"
+	echo "  silenced fish fastfetch greeting in $FISH_CFG."
+fi
+
 OVERRIDE_DIR=/etc/systemd/system/getty@tty1.service.d
 OVERRIDE_FILE="$OVERRIDE_DIR/autologin.conf"
 
@@ -371,7 +538,7 @@ fi
 fi
 
 # ---------------------------------------------------------------------------
-banner "8/8  systemd-oomd (kill runaway agents before swap death-spiral)"
+banner "9/9  systemd-oomd (kill runaway agents before swap death-spiral)"
 # ---------------------------------------------------------------------------
 # Without oomd: one Claude/agent eats all RAM → kernel OOM-killer fires
 # randomly, often kills the WM and tanks the session. With oomd: the
@@ -445,8 +612,8 @@ if is_macos; then
 	echo "   (recover with: chsh -s /bin/zsh):"
 	echo "   brew install zsh && echo \"\$(brew --prefix)/bin/zsh\" | sudo tee -a /etc/shells && chsh -s \"\$(brew --prefix)/bin/zsh\""
 else
-	echo "$STEP. Switch your shell to zsh (CachyOS defaults to fish):"
-	echo "   chsh -s /bin/zsh"
+	echo "$STEP. Login shell was set to zsh in step 8 (re-login or reboot to apply)."
+	echo "   If you skipped it: chsh -s \"\$(command -v zsh)\""
 fi
 STEP=$((STEP + 1))
 
@@ -482,10 +649,11 @@ else
 
 	echo
 	echo "$STEP. After login, sanity-check the stack:"
-	echo "   niri msg version          # niri up"
-	echo "   ghostty --version         # terminal up"
-	echo "   prime-run glxinfo | grep 'OpenGL renderer'   # should say NVIDIA"
-	echo "   glxinfo | grep 'OpenGL renderer'             # should say AMD (iGPU)"
+	echo "   niri msg version                            # niri up"
+	echo "   ghostty --version                           # terminal up"
+	echo "   glxinfo | grep 'OpenGL renderer'            # AMD Radeon 890M (iGPU)"
+	echo "   ls /sys/class/leds/ | grep kbd_backlight    # tuxedo-drivers keyboard LED"
+	echo "   systemctl status tailord                    # fan-control daemon"
 fi
 
 echo

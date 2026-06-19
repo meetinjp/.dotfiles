@@ -1,0 +1,3 @@
+# Default the keyboard backlight to OFF at boot. Set the LED to 0 when it appears
+# so it never comes up lit (adjust brightness with Fn+Space). Installed by setup.sh.
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*kbd_backlight*", ATTR{brightness}="0"
