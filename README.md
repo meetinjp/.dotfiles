@@ -1,6 +1,7 @@
 # .dotfiles
 
-Personal config for [CachyOS](https://cachyos.org/) on a laptop. Wayland
+Personal config for [CachyOS](https://cachyos.org/) on a **TUXEDO InfinityBook
+Pro 14 (AMD Gen10)** laptop. Wayland
 session is [niri](https://github.com/niri-wm/niri); shell-on-niri is
 [Noctalia](https://github.com/noctalia-dev/noctalia-shell) (Quickshell
 bar + launcher + notifications + lock + polkit + wallpaper rolled into
@@ -15,11 +16,14 @@ display manager — getty@tty1 autologins, and zsh's `.zprofile` execs
 > and stows everything in one shot, and that section has a full **React Native
 > / iOS** build walkthrough (Xcode 26, rbenv Ruby, CocoaPods, iPad).
 
-Hybrid-GPU target (AMD iGPU + Nvidia dGPU laptops). Niri renders on the
-AMD iGPU; the Nvidia card sleeps until `prime-run` wraps a process. Keeps
-Wayland-on-Nvidia headaches out of the desktop while leaving full GPU
-power available for games / CUDA. Machine-specific bits (panel output
-name, scale, GPU PCI path) are flagged in the config files for per-host
+Single AMD APU (Ryzen AI 9 HX 370 / Radeon 890M iGPU) — no discrete GPU, so
+niri auto-selects the only DRM device and there is no `prime-run` indirection.
+TUXEDO ships its own firmware + Tuxedo OS; on CachyOS the hardware parity
+(keyboard backlight, fan control, battery charge limit) comes from
+`tuxedo-drivers` + `tuxedo-rs` (`tailord`/`tailor-gui`), plus
+`tuxedo-yt6801-dkms-git` for wired 2.5G Ethernet on the LTS kernel — see the
+**[TUXEDO hardware](#tuxedo-hardware)** section below. Machine-specific bits
+(panel output name, scale) are flagged in the config files for per-host
 adjustment.
 
 Touchpad uses libinput `button-areas` click-method (bottom-right press = R
@@ -31,23 +35,30 @@ the `$BROWSER` env var (for CLI tools like `gh` and `man`).
 
 | Dir         | Purpose                                                      | How it lands           |
 | ----------- | ------------------------------------------------------------ | ---------------------- |
-| `bin/`      | `~/.local/bin/` scripts (`prime-run`, `niri-screenshot`)     | stowed                 |
+| `bin/`      | `~/.local/bin/` scripts (`niri-screenshot`)                  | stowed                 |
 | `claude/`   | Claude Code config patcher + plugin installer                | run by `install.sh`    |
 | `ghostty/`  | GPU-accelerated terminal (Gruvbox Dark Hard, zsh integration)| stowed                 |
 | `git/`      | gitconfig templates (identity injected at setup time)        | rendered by `setup.sh` |
 | `kanshi/`   | auto-switch monitor profiles (laptop / docked)               | stowed                 |
 | `niri/`     | Wayland compositor — scrollable tiling                       | stowed                 |
+| `noctalia/` | Noctalia colorscheme patcher (pins Gruvbox)                  | run by `install.sh`    |
 | `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim) | stowed                |
 | `prettier/` | global prettier config                                       | stowed                 |
 | `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)        | stowed                 |
 | `starship/` | cross-shell prompt config                                    | stowed                 |
+| `systemd/`  | `niri-session-anchor` user unit (holds graphical-session.target) | stowed (Linux)     |
+| `tailord/`  | tuxedo-rs fan presets (quiet/balanced/performance)          | installed by `setup.sh` |
 | `tmux/`     | `C-a` prefix, mouse on, vim nav, Gruvbox status              | stowed                 |
+| `udev/`     | keyboard-backlight-off-at-boot rule                         | installed by `setup.sh` |
 | `zsh/`      | bare zshrc + `.zprofile` (tty1 → niri handoff)               | stowed                 |
 
 Bar / launcher / notifications / lock / polkit / wallpaper are all
-provided by **Noctalia** (the `cachyos-niri-noctalia` package). No
-per-component config in this repo — Noctalia ships its own defaults
-and is configured at runtime via its own settings UI.
+provided by **Noctalia** (the `cachyos-niri-noctalia` package). Noctalia is
+configured at runtime via its own settings UI and live-mutates
+`~/.config/noctalia/settings.json`, so it isn't stowed. `install.sh` runs
+`noctalia/apply.sh` to pin the **Gruvbox** colorscheme (a flock'd JSON merge,
+same pattern as `claude/apply.sh`); everything else stays Noctalia's own
+defaults. It also applies live via Noctalia's IPC if the shell is running.
 
 ## Install
 
@@ -67,7 +78,7 @@ sudo pacman -S --needed \
     cachyos-niri-noctalia noctalia-shell noctalia-qs \
     xdg-desktop-portal-gnome xdg-desktop-portal-gtk gnome-keyring \
     brightnessctl wl-clipboard cliphist grim slurp \
-    pavucontrol playerctl pamixer power-profiles-daemon udisks2 keyd \
+    pavucontrol playerctl pamixer power-profiles-daemon fwupd udisks2 keyd \
     xdg-utils libnotify \
     zsh tmux starship zsh-autosuggestions zsh-syntax-highlighting \
     neovim ripgrep eza yazi curl unzip gnupg gcc python python-pip \
@@ -78,12 +89,19 @@ sudo pacman -S --needed \
 AUR (CachyOS ships `paru` by default):
 
 ```sh
-paru -S firefox-developer-edition
+paru -S firefox-developer-edition \
+    tuxedo-drivers-dkms tailord tailor-gui   # TUXEDO hardware — see below
 ```
 
-`cachyos-niri-noctalia` is the curated preset that pulls Noctalia (the
-Quickshell-based niri shell handling bar, launcher, notifications,
-lock, polkit, and wallpaper).
+The TUXEDO packages are installed automatically by `setup.sh` (step 7) on
+TUXEDO hardware; the line above is the manual equivalent. `cachyos-niri-noctalia`
+is the curated preset that pulls Noctalia (the Quickshell-based niri shell
+handling bar, launcher, notifications, lock, polkit, and wallpaper).
+
+> Building `tailor-gui` compiles Rust. CachyOS ships `rustup` **without** a
+> default toolchain, so `rustc` errors and the meson build fails with
+> `Unknown compiler(s): [['rustc']]`. Run `rustup default stable` first
+> (`setup.sh` step 7 does this for you).
 
 Node version manager + Bun (canonical install scripts — they manage their
 own dirs under `~/.nvm` and `~/.bun`):
@@ -138,19 +156,25 @@ defaults in non-interactive runs.
 4. Generates an Ed25519 GPG key with sign + auth subkeys.
 5. Configures gpg-agent to serve the auth subkey as an ssh-agent.
 6. Remaps Caps Lock — Ctrl on Linux (`/etc/keyd/default.conf` + keyd), Cmd on macOS (`hidutil` LaunchAgent).
-7. Disables any existing display manager + installs a `getty@tty1`
-   autologin drop-in for this user. zsh's `.zprofile` then execs
-   `niri --session` on tty1 when no Wayland session is up.
-8. Enables `systemd-oomd` with a `user@.service` drop-in that kills
+7. **TUXEDO hardware** (TUXEDO machines only): `paru -S tuxedo-drivers-dkms
+   tailord tailor-gui` (+ optional `tuxedo-yt6801-dkms-git` for LTS-kernel
+   Ethernet), enables `tailord`, and installs a `battery-charge-limit.service`
+   capping the battery at 80% once the charge-limit sysfs is live.
+8. Sets the login shell to **zsh** (`chsh`), disables any display manager,
+   installs a `getty@tty1` autologin drop-in, and silences the CachyOS fish
+   fastfetch greeting. zsh's `.zprofile` then execs `niri --session` on tty1
+   when no Wayland session is up.
+9. Enables `systemd-oomd` with a `user@.service` drop-in that kills
    the heaviest user cgroup under memory pressure (multi-agent OOM
    resilience).
 
 Then prints the GPG / SSH public keys + a checklist of next steps.
 
-### 4. Switch shell + reboot
+### 4. Reboot
+
+`setup.sh` already set your login shell to zsh (step 8), so just reboot:
 
 ```sh
-chsh -s /bin/zsh
 sudo systemctl reboot
 ```
 
@@ -163,7 +187,7 @@ For an emergency shell switch to tty2..tty6 (`Ctrl+Alt+F2..F6`).
 ## macOS (Xcode box)
 
 The CLI/dev half of this repo is cross-platform. The Linux **desktop** —
-niri, kanshi, wlsunset, Noctalia, the Win11 KVM VM, Nvidia `prime-run` — has
+niri, kanshi, wlsunset, Noctalia, the Win11 KVM VM — has
 no macOS equivalent and is intentionally skipped there; macOS ships native
 screenshots, display arrangement, and GPU management. `install.sh` and
 `setup.sh` branch on `uname`, so the same scripts run on both OSes.
@@ -205,7 +229,7 @@ What the macOS branches do differently:
 | Caps Lock      | keyd (`/etc/keyd`) → **Ctrl**  | `hidutil` LaunchAgent (`~/Library/LaunchAgents`) → **Cmd**   |
 | Firefox `user.js` | stowed to `~/.config`       | symlinked into `~/Library/Application Support/Firefox`       |
 | Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
-| Desktop / VM   | niri, kanshi, prime-run, KVM   | skipped — use native macOS                                   |
+| Desktop / VM   | niri, kanshi, KVM              | skipped — use native macOS                                   |
 
 zsh is already the default shell on macOS (Catalina+), and Apple's `/bin/zsh`
 is fine. Homebrew's zsh is **not** in the `Brewfile`, so switch to it only if
@@ -362,6 +386,8 @@ different public formats:
 - `Alt + C` — close window.
 - `Super + L` — Noctalia lock (uses Super not Alt so it doesn't shadow focus-right).
 - `Print` — interactive screenshot (region by default).
+- Keyboard backlight: **`Fn + Space`** (native, EC-handled; defaults to off at
+  boot via a udev rule — see TUXEDO hardware).
 
 Full reference: <https://github.com/niri-wm/niri/wiki/Configuration:-Key-Bindings>.
 
@@ -378,24 +404,63 @@ Full reference: <https://github.com/niri-wm/niri/wiki/Configuration:-Key-Binding
 
 Full reference: <https://ghostty.org/docs/config/keybind/reference>.
 
-## Nvidia / prime-run
+## TUXEDO hardware
 
-Niri renders on the AMD iGPU. To run a single process on the Nvidia dGPU,
-prefix with `prime-run` (script lives in `bin/.local/bin/prime-run`):
+TUXEDO laptops ship their own firmware + Tuxedo OS. On CachyOS the hardware
+parity comes from three AUR packages (installed by `setup.sh` step 7, or by hand
+with `paru -S`):
+
+- **`tuxedo-drivers-dkms`** — out-of-tree kernel modules: white keyboard
+  backlight (`/sys/class/leds/white:kbd_backlight`), fan/thermal control, the
+  `tuxedo_io` control interface, and the battery charge-limit sysfs. DKMS
+  rebuilds against every installed kernel's headers on each update. It
+  blacklists the in-tree `uniwill_laptop` module, so **reboot once** after the
+  first install for a clean module handoff.
+- **`tailord` + `tailor-gui`** — the
+  [tuxedo-rs](https://github.com/AaronErhardt/tuxedo-rs) project (note:
+  `tuxedo-rs` itself is *not* an installable package). A lightweight Rust
+  fan-curve / profile daemon + native GTK4 app, chosen over **Tuxedo Control
+  Center** (Electron + `tccd`): it does not fight `power-profiles-daemon` over
+  the CPU governor. Don't run TCC and tuxedo-rs together. Enable the daemon with
+  `sudo systemctl enable --now tailord`.
 
 ```sh
-prime-run firefox-developer-edition
-prime-run blender
-prime-run steam
-prime-run glxinfo | grep "OpenGL renderer"      # confirms Nvidia
+# keyboard backlight — adjust with Fn+Space (native); or scripted via brightnessctl:
+brightnessctl --device='white:kbd_backlight' set 50%
+# confirm the tuxedo modules are loaded
+lsmod | grep -E 'tuxedo|uniwill'
 ```
 
-For the desktop renderer the answer should be the AMD card — verify with
-the unprefixed call: `glxinfo | grep "OpenGL renderer"`.
+**Keyboard backlight.** Adjust it with **`Fn + Space`** (native, EC-handled).
+`setup.sh` installs a udev rule that defaults the backlight to **off** at boot
+(`/etc/udev/rules.d/99-kbd-backlight-off.rules`).
 
-If the Nvidia card fights you (e.g. VRAM creep when something *does* run
-on it), the well-known fix is described in
-<https://github.com/niri-wm/niri/wiki/Nvidia>.
+**Fan presets.** `setup.sh` installs three levels — `quiet` / `balanced` /
+`performance` (tracked in `tailord/`) — to `/etc/tailord/`, makes **`balanced`**
+the active/default profile, and removes tuxedo-rs's shipped `default` so only
+those three show in **`tailor_gui`**. Switch anytime in the GUI; tune the curves
+in `tailord/fan/*.json` and rerun `setup.sh`.
+
+**Battery charge limit.** `setup.sh` installs a `battery-charge-limit.service`
+that caps charging for longevity, detecting whichever knob the board exposes:
+a numeric `charge_control_end_threshold` (writes `80`), or TUXEDO's
+`charging_profile` selector — `high_capacity` (100%) / `balanced` (~90%) /
+`stationary` (~80%, the longevity setting; what the InfinityBook Pro 14 AMD
+Gen10 uses). The sysfs only appears once `tuxedo-drivers` is loaded, so reboot
+after the first install, then rerun `setup.sh`. Pick a different ceiling by
+editing the unit's `ExecStart` value; remove it with
+`sudo systemctl disable --now battery-charge-limit.service`.
+
+**Wired 2.5G Ethernet (Motorcomm YT6801).** The in-tree driver works on the
+main `linux-cachyos` kernel, but the module is absent from `linux-cachyos-lts`.
+Install `tuxedo-yt6801-dkms-git` (offered by `setup.sh`) so wired networking
+also works when you boot the LTS fallback kernel.
+
+**Firmware.** TUXEDO does **not** publish BIOS/EC updates to LVFS/`fwupd` for
+this model — flash those manually from your TUXEDO account. `fwupd` is still
+worth having for SSD/peripheral firmware (`fwupdmgr refresh && fwupdmgr update`).
+No kernel cmdline tweaks are needed: `amd_pstate` is already in `active` mode and
+`s2idle` is the correct suspend state for Strix Point (do **not** force `deep`).
 
 ## Bluetooth
 
@@ -449,11 +514,23 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
   degrees), then reload niri or rerun `wlsunset` manually.
 - Autologin doesn't fire: check
   `sudo systemctl cat getty@tty1` for the `ExecStart=` line containing
-  `--autologin <yourname>`. If absent, rerun `setup.sh` (step 7
+  `--autologin <yourname>`. If absent, rerun `setup.sh` (step 8
   installs the drop-in). Also verify no display manager is enabled:
   `systemctl is-enabled sddm gdm lightdm ly greetd`. Any "enabled"
   here will steal tty1 from autologin.
 - Stuck at a zsh prompt on tty1 after boot (niri-session didn't fire):
   the `.zprofile` guard didn't match. Run `tty` (must say `/dev/tty1`)
-  and `echo $WAYLAND_DISPLAY` (must be empty). Type `exec niri-session`
+  and `echo $WAYLAND_DISPLAY` (must be empty). Type `exec niri --session`
   to start it by hand.
+- **Boots to a CLI + a fastfetch banner instead of niri** (the classic
+  "bad UI"): your login shell is still **fish**, which never sources
+  `~/.zprofile` (where the niri handoff lives) and runs the CachyOS fastfetch
+  greeting. Fix: `chsh -s "$(command -v zsh)"` and reboot — `setup.sh` step 8
+  does this for you.
+- **Caps Lock isn't Ctrl**: `systemctl is-enabled keyd` should say `enabled`
+  and `/etc/keyd/default.conf` should contain `capslock = leftcontrol`. If
+  not, rerun `setup.sh` (step 6), then `sudo systemctl enable --now keyd`.
+- **Keyboard backlight keys do nothing / `white:kbd_backlight` missing**:
+  `tuxedo-drivers-dkms` isn't loaded. Confirm it's installed
+  (`pacman -Qq tuxedo-drivers-dkms`) and **reboot** so the platform modules
+  bind; `ls /sys/class/leds/` should then list `white:kbd_backlight`.

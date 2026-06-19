@@ -34,10 +34,10 @@ fi
 # Note: getty@tty1 autologin override lives at /etc/systemd/system/... and
 # is sudo-installed by setup.sh, not stowed.
 #
-# Split by OS. COMMON stows everywhere. LINUX_ONLY is the Wayland/GPU desktop
-# (niri, kanshi), the bin/ helper scripts (niri-screenshot, prime-run — both
-# Linux-only), and firefox (its XDG path is wrong on macOS, so the macOS branch
-# at the end links user.js into ~/Library instead of stowing the package).
+# Split by OS. COMMON stows everywhere. LINUX_ONLY is the Wayland desktop
+# (niri, kanshi), the niri-session-anchor systemd user unit, the bin/ helper
+# script (niri-screenshot, Linux-only), and firefox (its XDG path is wrong on
+# macOS, so the macOS branch links user.js into ~/Library instead of stowing).
 COMMON_DIRS=(
 	ghostty
 	nvim
@@ -53,6 +53,7 @@ LINUX_ONLY_DIRS=(
 	firefox
 	kanshi
 	niri
+	systemd
 )
 if is_macos; then
 	STOW_DIRS=("${COMMON_DIRS[@]}")
@@ -69,6 +70,26 @@ echo "Installing dotfiles..."
 # only the leaf file. Idempotent.
 mkdir -p "$HOME/.rbenv"
 
+# Same tree-fold guard for systemd user units (Linux only): pre-create the real
+# dir so stow links only the leaf .service file in, instead of symlinking the
+# whole ~/.config/systemd/user into the repo — which would trap any future
+# `systemctl --user enable` wants/ symlinks inside the git tree.
+if ! is_macos; then
+	mkdir -p "$HOME/.config/systemd/user"
+fi
+
+# The nvim config is a git submodule with an SSH remote. On a fresh box the SSH
+# key isn't on GitHub yet, so a plain `git clone` (or one without --recursive)
+# leaves nvim/.config/nvim empty — and nvim then loads its bare defaults. Init it
+# over HTTPS via insteadOf so it works before the key is uploaded. Idempotent:
+# skips once the submodule's init.lua is present.
+if [[ -f "$DOTFILES/.gitmodules" && ! -e "$DOTFILES/nvim/.config/nvim/init.lua" ]]; then
+	echo "Initialising git submodules (nvim config) over HTTPS..."
+	git -C "$DOTFILES" -c url."https://github.com/".insteadOf="git@github.com:" \
+		submodule update --init --recursive \
+		|| echo "  submodule init failed — rerun once your SSH key is on GitHub."
+fi
+
 pushd "$DOTFILES" >/dev/null
 
 for dir in "${STOW_DIRS[@]}"; do
@@ -78,9 +99,20 @@ done
 
 popd >/dev/null
 
+# Make any freshly-stowed systemd user units (e.g. niri-session-anchor.service)
+# visible to the running user manager without a relogin. No-op if the user
+# manager isn't up (e.g. provisioning over SSH).
+if ! is_macos && command -v systemctl &>/dev/null; then
+	systemctl --user daemon-reload 2>/dev/null || true
+fi
+
 # Claude Code config — patched rather than stowed since ~/.claude.json is
 # live-mutated by Claude itself.
 "$DOTFILES/claude/apply.sh"
+
+# Noctalia colorscheme — patched rather than stowed since Noctalia live-mutates
+# its settings.json. Pins the Gruvbox scheme; Linux-only (no-op on macOS).
+"$DOTFILES/noctalia/apply.sh"
 
 # macOS-only deployment for paths stow can't express (they live outside
 # ~/.config). Idempotent — safe to rerun.
