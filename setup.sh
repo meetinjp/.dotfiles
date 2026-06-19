@@ -18,7 +18,8 @@ set -euo pipefail
 #      zsh's .zprofile then execs niri --session on tty1.
 #   9. Enables systemd-oomd with a user@.service drop-in so runaway
 #      multi-agent workloads get surgically killed before swap death-spiral.
-#  10. Prints the public keys + a checklist of what to do next.
+#  10. Enables sudo pwfeedback (shows '*' while typing the password).
+#  11. Prints the public keys + a checklist of what to do next.
 #
 # Apps deliberately NOT touched here: music player (install/pick at will,
 # not part of the dotfile contract), browsers beyond firefox-developer-edition,
@@ -110,7 +111,7 @@ echo " .dotfiles setup ($(uname -s))"
 echo "═════════════════════════════════════════════════════════════════"
 
 # ---------------------------------------------------------------------------
-banner "1/9  Identity"
+banner "1/10  Identity"
 # ---------------------------------------------------------------------------
 echo "Set via env vars to skip prompts: GIT_NAME, GIT_EMAIL, GIT_WORK_EMAIL."
 prompt_var GIT_NAME       "git name    (e.g. meetinjp)"
@@ -118,7 +119,7 @@ prompt_var GIT_EMAIL      "git personal email"
 prompt_var GIT_WORK_EMAIL "git work email  (leave blank to skip)"
 
 # ---------------------------------------------------------------------------
-banner "2/9  Render config templates"
+banner "2/10  Render config templates"
 # ---------------------------------------------------------------------------
 render_template() {
 	local src="$1" dst="$2"
@@ -142,7 +143,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-banner "3/9  Locale (en_US.UTF-8)"
+banner "3/10  Locale (en_US.UTF-8)"
 # ---------------------------------------------------------------------------
 # Make sure en_US.UTF-8 is generated so perl, locale-aware libs, and Niri
 # don't spam warnings.
@@ -164,7 +165,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-banner "4/9  GPG key (sign + auth, used for both git signing and SSH)"
+banner "4/10  GPG key (sign + auth, used for both git signing and SSH)"
 # ---------------------------------------------------------------------------
 # Stage gpg-agent BEFORE we try to use it. On a fresh box without a populated
 # graphical session, /usr/bin/pinentry's dispatcher can hang silently when
@@ -226,7 +227,7 @@ if [[ -n "${KEYID:-}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-banner "5/9  SSH-over-GPG (gpg-agent serves the auth subkey)"
+banner "5/10  SSH-over-GPG (gpg-agent serves the auth subkey)"
 # ---------------------------------------------------------------------------
 AUTH_KEYGRIP=""
 if [[ -n "${KEYID:-}" ]]; then
@@ -258,7 +259,7 @@ if [[ -n "${KEYID:-}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-banner "6/9  Caps Lock remap (Linux: Ctrl via keyd / macOS: Cmd via hidutil)"
+banner "6/10  Caps Lock remap (Linux: Ctrl via keyd / macOS: Cmd via hidutil)"
 # ---------------------------------------------------------------------------
 if is_macos; then
 	# macOS has no keyd. Install a LaunchAgent that runs hidutil at login to
@@ -323,7 +324,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-banner "7/9  TUXEDO hardware (drivers + fan/charge control)"
+banner "7/10  TUXEDO hardware (drivers + fan/charge control)"
 # ---------------------------------------------------------------------------
 # TUXEDO laptops need out-of-tree bits that Tuxedo OS preinstalls but a vanilla
 # Arch/CachyOS box does not:
@@ -450,7 +451,7 @@ EOF
 fi
 
 # ---------------------------------------------------------------------------
-banner "8/9  Login shell (zsh) + autologin to tty1 → niri-session"
+banner "8/10  Login shell (zsh) + autologin to tty1 → niri-session"
 # ---------------------------------------------------------------------------
 # No display manager: getty@tty1 autologins this user via a systemd drop-in.
 # zsh's .zprofile (stowed) then execs niri-session when it sees tty1 + no
@@ -538,7 +539,7 @@ fi
 fi
 
 # ---------------------------------------------------------------------------
-banner "9/9  systemd-oomd (kill runaway agents before swap death-spiral)"
+banner "9/10  systemd-oomd (kill runaway agents before swap death-spiral)"
 # ---------------------------------------------------------------------------
 # Without oomd: one Claude/agent eats all RAM → kernel OOM-killer fires
 # randomly, often kills the WM and tanks the session. With oomd: the
@@ -577,6 +578,29 @@ EOF
 		echo "  wrote $OOMD_DROPIN_FILE"
 	fi
 fi
+fi
+
+# ---------------------------------------------------------------------------
+banner "10/10  sudo password feedback (show '*' while typing)"
+# ---------------------------------------------------------------------------
+# CachyOS/Arch sudo is silent while typing the password; pwfeedback echoes '*'
+# per char. Validated with visudo before it can take effect so a typo can't lock
+# you out. (Safe on modern sudo — the old pwfeedback CVE was fixed in 1.8.31.)
+if is_macos; then
+	echo "  macOS sudo — pwfeedback drop-in is Linux-only, skipping."
+else
+	PWF=/etc/sudoers.d/pwfeedback
+	if sudo test -f "$PWF" 2>/dev/null; then
+		echo "  sudo pwfeedback already enabled."
+	elif confirm "Show '*' while typing the sudo password? (needs sudo) [Y/n]"; then
+		sudo install -m 0440 -o root -g root "$DOTFILES/sudoers.d/pwfeedback" "$PWF"
+		if sudo visudo -c >/dev/null 2>&1; then
+			echo "  enabled — sudo will echo '*' for the password."
+		else
+			sudo rm -f "$PWF"
+			echo "  sudoers validation FAILED — reverted (no change)." >&2
+		fi
+	fi
 fi
 
 # ---------------------------------------------------------------------------

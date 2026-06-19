@@ -1,0 +1,5 @@
+# Echo '*' for each character while typing the sudo password (CachyOS/Arch sudo
+# is silent by default). Safe on modern sudo — the old pwfeedback overflow
+# (CVE-2019-18634) was fixed in 1.8.31. Installed by setup.sh to
+# /etc/sudoers.d/pwfeedback with mode 0440.
+Defaults pwfeedback

@@ -46,6 +46,7 @@ the `$BROWSER` env var (for CLI tools like `gh` and `man`).
 | `prettier/` | global prettier config                                       | stowed                 |
 | `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)        | stowed                 |
 | `starship/` | cross-shell prompt config                                    | stowed                 |
+| `sudoers.d/`| sudo `pwfeedback` (show `*` while typing the password)       | installed by `setup.sh` |
 | `systemd/`  | `niri-session-anchor` user unit (holds graphical-session.target) | stowed (Linux)     |
 | `tailord/`  | tuxedo-rs fan presets (quiet/balanced/performance)          | installed by `setup.sh` |
 | `tmux/`     | `C-a` prefix, mouse on, vim nav, Gruvbox status              | stowed                 |
@@ -167,6 +168,8 @@ defaults in non-interactive runs.
 9. Enables `systemd-oomd` with a `user@.service` drop-in that kills
    the heaviest user cgroup under memory pressure (multi-agent OOM
    resilience).
+10. Enables sudo `pwfeedback` — shows `*` while typing the password
+    (validated with `visudo` so a typo can't lock you out).
 
 Then prints the GPG / SSH public keys + a checklist of next steps.
 
