@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Minimal-footprint Windows 11 VM for Okta Verify + Chrome on niri/CachyOS.
-# Designed for: laptop with hybrid GPU (AMD iGPU used for virgl, NVIDIA left free).
-# Target footprint: ~14 GB disk used / 35 GB sparse, ~2 GB RAM ballooned, 2 vCPU.
+# Designed for: TUXEDO InfinityBook Pro 14 (AMD Gen10) — single AMD iGPU used for virgl.
+# Target footprint: ~14 GB disk used / 64 GB sparse, ~2 GB RAM ballooned, 2 vCPU.
 # Win11 hard requires: UEFI + Secure Boot + TPM 2.0. All wired up here.
 #
 # Usage:
@@ -17,7 +17,7 @@ DISK_PATH="$VM_DIR/${VM_NAME}.qcow2"
 DISK_SIZE_GB="${DISK_SIZE_GB:-64}"
 RAM_MB="${RAM_MB:-4096}"
 VCPUS="${VCPUS:-2}"
-RENDER_NODE="${RENDER_NODE:-/dev/dri/renderD129}"   # AMD iGPU
+RENDER_NODE="${RENDER_NODE:-/dev/dri/renderD128}"   # AMD iGPU (single-GPU box; verify: ls -l /dev/dri/by-path/)
 VIRTIO_WIN_ISO="$VM_DIR/virtio-win.iso"
 VIRTIO_WIN_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
 # Bluetooth USB passthrough. Set BT_USB="vendor:product" (e.g. 0489:e0e4) or

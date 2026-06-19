@@ -10,7 +10,7 @@ Linux when your org's Okta policy requires the Windows desktop client.
   Override with `DISK_SIZE_GB=N` env var before running `setup.sh`.
 - RAM: 4 GB allocated, ~1.5–2 GB used after balloon (Win11 needs more than Win10).
 - vCPU: 2 cores (host-passthrough, no emulation overhead)
-- GPU: virgl on AMD iGPU (`renderD129`); NVIDIA RTX 4060 left untouched
+- GPU: virgl on the AMD iGPU (`renderD128`; single-GPU laptop, no discrete GPU)
 - Win11 hard requirements satisfied: UEFI + Secure Boot + TPM 2.0 (swtpm).
 - Support: in-support until 2031 (24H2) — long-term stable.
 
@@ -241,5 +241,5 @@ alias vmstop='virsh --connect qemu:///system shutdown win11-okta'
 | Disk not found during install | Skipped Step 3.5 — re-run with virtio driver load (`viostor\w11\amd64`). |
 | OOBE forces MS-account sign-in | Press Shift+F10 → `start ms-cxh:localonly` (24H2+) or `oobe\BypassNRO.cmd` (older). Or unplug the NIC link in virt-manager. |
 | Okta Verify "device unmanaged" | Org requires SCEP / device-trust onboarding link from IT. |
-| Slow display | Confirm `gl.enable=yes` in `<graphics spice>` + `accel3d='yes'` in `<video>`. `setfacl -m u:libvirt-qemu:rw /dev/dri/renderD129`. |
+| Slow display | Confirm `gl.enable=yes` in `<graphics spice>` + `accel3d='yes'` in `<video>`. `setfacl -m u:libvirt-qemu:rw /dev/dri/renderD128`. |
 | Win11 nags about activation | Ignore. Watermark only. Personalisation locked but irrelevant for this use. |

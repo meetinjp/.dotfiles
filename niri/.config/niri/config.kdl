@@ -1,7 +1,6 @@
 // niri — Wayland scrollable-tiling compositor.
-// Hybrid-GPU laptop target (AMD iGPU + Nvidia dGPU). Niri renders on the
-// AMD iGPU; the Nvidia card sleeps until `prime-run` wraps a process —
-// saves battery and dodges Nvidia/Wayland rough edges.
+// TUXEDO InfinityBook Pro 14 (AMD Gen10): single AMD iGPU (Radeon 890M).
+// niri auto-selects the only DRM device — no render-device pinning needed.
 //
 // Shell: Noctalia (Quickshell). Provides bar + launcher + notifications +
 // lock + polkit + wallpaper + idle handling. Spawned via `qs -c noctalia-shell`.
@@ -112,8 +111,7 @@ hotkey-overlay {
 }
 
 // ─── ENVIRONMENT ─────────────────────────────────────────────────────────────
-// Only what Niri itself launches. No Nvidia env vars here — those go through
-// `prime-run` per-process.
+// Only what Niri itself launches.
 
 environment {
     // DISPLAY intentionally unset here — xwayland-satellite picks the
@@ -138,13 +136,6 @@ debug {
     // activation requests succeed even when the xdg-activation serial
     // is stale.
     honor-xdg-activation-with-invalid-serial
-
-    // PER-HOST: pin niri's render device to the AMD iGPU so the Nvidia
-    // dGPU stays asleep when no prime-run process is active. Find your
-    // iGPU's stable by-path with:
-    //   ls -l /dev/dri/by-path/    # match the *-card pointing at the AMD slot
-    // Confirm by reading `lspci | grep VGA` and matching PCI bus IDs.
-    render-drm-device "/dev/dri/by-path/pci-0000:65:00.0-card"
 }
 
 // ─── SCREENSHOT ──────────────────────────────────────────────────────────────
@@ -224,9 +215,10 @@ switch-events {
 
 // Push Wayland env into the systemd user manager + dbus activation env so
 // xdg-desktop-portal-gnome (screencast for Loom/OBS/Meet) sees WAYLAND_DISPLAY
-// and starts cleanly. niri is not launched as niri.service here, so
-// graphical-session.target is held active by ~/.config/systemd/user/niri-session-anchor.service.
-spawn-at-startup "sh" "-c" "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP; dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP; systemctl --user restart xdg-desktop-portal.service xdg-desktop-portal-gnome.service"
+// and starts cleanly. niri is not launched as niri.service here, so we start
+// niri-session-anchor.service (stowed to ~/.config/systemd/user/) to pull up
+// graphical-session.target — user services that bind to it then come up.
+spawn-at-startup "sh" "-c" "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP; dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP; systemctl --user start niri-session-anchor.service; systemctl --user restart xdg-desktop-portal.service xdg-desktop-portal-gnome.service"
 
 spawn-at-startup "qs" "-c" "noctalia-shell"
 spawn-at-startup "kanshi"
