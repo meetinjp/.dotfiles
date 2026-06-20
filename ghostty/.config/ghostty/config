@@ -20,7 +20,7 @@ theme = Gruvbox Dark Hard
 window-decoration = server
 window-padding-x = 0
 window-padding-y = 0
-# Center cells in window so fractional-scale (niri scale 1.1) rounding
+# Center cells in window so fractional-scale (niri scale 1.75) rounding
 # doesn't clip the bottom TUI row in Claude / nvim / lazygit.
 window-padding-balance = true
 

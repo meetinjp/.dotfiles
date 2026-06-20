@@ -28,8 +28,8 @@ adjustment.
 
 Touchpad uses libinput `button-areas` click-method (bottom-right press = R
 click, Windows/PC style) plus tap-to-click on top (2-finger tap also R).
-Default browser is `firefox-developer-edition`, set both via xdg-mime and
-the `$BROWSER` env var (for CLI tools like `gh` and `man`).
+Default browser is Zen (`zen-browser`), set both via xdg-mime and the
+`$BROWSER` env var (for CLI tools like `gh` and `man`).
 
 ## Layout
 
@@ -90,7 +90,7 @@ sudo pacman -S --needed \
 AUR (CachyOS ships `paru` by default):
 
 ```sh
-paru -S firefox-developer-edition \
+paru -S zen-browser-bin \
     tuxedo-drivers-dkms tailord tailor-gui   # TUXEDO hardware — see below
 ```
 
@@ -230,7 +230,7 @@ What the macOS branches do differently:
 | zsh plugins    | `/usr/share/zsh/plugins`       | `$HOMEBREW_PREFIX/share` (probed in `.zshrc`)                |
 | SSH auth       | gpg-agent (`gpgconf` socket)   | **same** — gpg-agent parity, `pinentry-mac` auto-pinned       |
 | Caps Lock      | keyd (`/etc/keyd`) → **Ctrl**  | `hidutil` LaunchAgent (`~/Library/LaunchAgents`) → **Cmd**   |
-| Firefox `user.js` | stowed to `~/.config`       | symlinked into `~/Library/Application Support/Firefox`       |
+| Zen `user.js`  | repo `user.js` symlinked into the active `~/.config/zen` profile | repo `user.js` symlinked into `~/Library/Application Support/zen/Profiles` |
 | Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
 | Desktop / VM   | niri, kanshi, KVM              | skipped — use native macOS                                   |
 
@@ -378,8 +378,8 @@ different public formats:
 - `Alt + Ctrl + H/J/K/L` — move the focused column/window in that direction.
 - `Alt + 1..9` — focus workspace; `Alt + Shift + 1..9` — move column to.
 - `Alt + Shift + arrows` — focus monitor in that direction; add `Ctrl` to
-  move the focused column across monitors. ws1 + ws2 are pinned to
-  `HDMI-A-1` (external) when docked; ws3..9 stay on the laptop panel.
+  move the focused column across monitors. At startup Ghostty lands on ws1
+  and Zen on ws2 of the monitor focused at spawn time.
 - `Alt + ,` / `Alt + .` — consume/expel a window from the current column.
 - `Alt + R` — cycle preset column widths (1/3 → 1/2 → 2/3).
 - `Alt + F` — maximize column; `Alt + Shift + F` — true fullscreen.

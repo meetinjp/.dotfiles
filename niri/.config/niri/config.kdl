@@ -49,12 +49,11 @@ input {
 
 // PER-HOST: output name (eDP-1 / eDP-2 / etc.), resolution, refresh, and
 // scale depend on the laptop panel. Confirm via `niri msg outputs` and
-// adjust below if needed. scale 1.1 = ~10% bigger text + UI across all
-// Wayland-native apps; bump to 1.25/1.5 for chunkier, drop to 1.0 for
-// native pixel-perfect.
-output "eDP-2" {
-    mode "1920x1200@165.000"
-    scale 1.1
+// adjust below if needed. scale 1.75 = larger text + UI on the 2880x1800
+// panel; bump higher for chunkier, drop to 1.0 for native pixel-perfect.
+output "eDP-1" {
+    mode "2880x1800@120.000"
+    scale 1.75
     transform "normal"
     position x=0 y=0
     variable-refresh-rate on-demand=true
@@ -144,15 +143,11 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
 // ─── ANIMATIONS ──────────────────────────────────────────────────────────────
 
-animations {
-    slowdown 0.7
-
-    // Kill workspace-switch transition: when both source and target
-    // workspaces have a fullscreen window covering the noctalia Top-layer
-    // bar, the animation's mid-frame briefly exposes the bar. Switching
-    // instantly skips that flash.
-    workspace-switch { off; }
-}
+// Stock niri animations (defaults). Previously customized — slowdown 0.7 (1.4x
+// faster) + workspace-switch { off; } to hide a brief Noctalia-bar flash when
+// switching between workspaces that both have a fullscreen window. Reverted to
+// defaults on request. If that bar-flash on fullscreen workspace switches
+// bothers you, re-add an `animations { workspace-switch { off; } }` block here.
 
 // ─── WINDOW RULES ────────────────────────────────────────────────────────────
 
@@ -177,17 +172,14 @@ window-rule {
     open-maximized true
 }
 
-// ── Firefox / chromium-derivatives ──
+// ── Zen Browser ──
 // clip-to-geometry strips the CSD corner halos; at-startup → ws2 fullscreen.
 window-rule {
-    match app-id="firefox"
-    match app-id="firefox-developer-edition"
-    match app-id="LibreWolf"
+    match app-id="^zen$"
     clip-to-geometry true
 }
 window-rule {
-    match app-id="firefox-developer-edition" at-startup=true
-    match app-id="firefox" at-startup=true
+    match app-id="^zen$" at-startup=true
     open-on-workspace "2"
     open-fullscreen true
 }
@@ -204,14 +196,14 @@ switch-events {
 // declarations — `Alt+N` targets the Nth ws of the currently focused
 // monitor. Moving a workspace between monitors renumbers it into the
 // destination's stack. The at-startup window-rules below still place
-// ghostty + firefox on ws1 + ws2 because niri auto-creates them on the
+// ghostty + zen on ws1 + ws2 because niri auto-creates them on the
 // focused monitor at spawn time.
 
 // ─── SPAWN AT STARTUP ────────────────────────────────────────────────────────
 // Noctalia covers bar + launcher + notifications + lock + polkit + wallpaper.
 // xwayland-satellite handles X11 apps. kanshi manages multi-monitor.
 // wlsunset warms the display color temperature after sunset.
-// Ghostty + Firefox auto-launch and land in their workspaces (rules below).
+// Ghostty + Zen auto-launch and land in their workspaces (rules below).
 
 // Push Wayland env into the systemd user manager + dbus activation env so
 // xdg-desktop-portal-gnome (screencast for Loom/OBS/Meet) sees WAYLAND_DISPLAY
@@ -234,7 +226,7 @@ spawn-at-startup "wlsunset" "-l" "0.00" "-L" "0.00"
 // propagates cmd's exit code when skip is unset (so real spawn failures
 // still surface in niri's log).
 spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || ghostty"
-spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || firefox-developer-edition"
+spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || zen-browser"
 
 // ─── KEYBINDINGS ─────────────────────────────────────────────────────────────
 // Mod = Alt (matches your old Hyprland muscle memory).

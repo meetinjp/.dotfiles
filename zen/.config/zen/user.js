@@ -1,66 +1,17 @@
 /****************************************************************************
- * user.js — Firefox Developer Edition profile overrides
+ * user.js — Zen Browser profile overrides (Peskyfox subset of Betterfox).
  *
- * Layout: Fastfox (perf, curated for Linux/gentle RAM) + Peskyfox (UI annoyances).
- * Source: https://github.com/yokoffing/Betterfox
+ * Zen is a Firefox fork; these Gecko prefs apply unchanged. The old Fastfox
+ * perf block was intentionally NOT ported: its VA-API disable forced
+ * software video decode (correct for the retired hybrid NVIDIA box, wrong
+ * for the AMD-only Radeon 890M iGPU where renderD128 IS the AMD node).
+ * Leaving VA-API at its default lets Zen use iGPU hardware video decode.
  *
- * Profile hash `1oruemyl.dev-edition-default` is per-install. On a fresh
- * machine, locate the new hash via ~/.config/mozilla/firefox/profiles.ini
- * and rename this directory before re-stowing.
+ * Source: https://github.com/yokoffing/Betterfox (Peskyfox section).
+ * The profile hash is per-install: install.sh resolves the active Zen
+ * profile from ~/.config/zen/installs.ini + profiles.ini and symlinks the
+ * stowed ~/.config/zen/user.js into <profile>/user.js (both Linux + macOS).
  ***************************************************************************/
-
-
-/****************************************************************************
- * FASTFOX — perf prefs (Linux, gentle RAM)                                 *
- ***************************************************************************/
-
-// GPU compositor — force WebRender for consistent GPU rendering.
-user_pref("gfx.webrender.all", true);
-
-// Hardware video decode (VA-API) — DISABLED on this hybrid GPU box.
-// renderD128=NVIDIA (flaky VDPAU-wrapper VA-API under Wayland),
-// renderD129=AMD iGPU. Firefox probes the NVIDIA node first and stutters;
-// force-enabled also bypassed the safety blocklist so it never fell back
-// cleanly → choppy YouTube. Software decode on the Ryzen iGPU handles
-// 1080p/4K fine. To revisit proper HW decode, pin Firefox to the AMD
-// render node via MOZ_DRM_DEVICE=/dev/dri/renderD129 (note: node numbers
-// can swap across boots — use a /dev/dri/by-path entry for stability).
-// Set false explicitly (not just removed): a commented-out pref leaves the
-// previously-applied value stale in prefs.js, so we force it back to default.
-user_pref("media.ffmpeg.vaapi.enabled", false);
-user_pref("media.hardware-video-decoding.force-enabled", false);
-
-// Memory cache — store more decoded pages/images for faster revisits.
-// 128 MB (default ~32 MB on 8GB+ machines).
-user_pref("browser.cache.memory.capacity", 131072);
-user_pref("browser.cache.memory.max_entry_size", 20480);
-
-// Faster TLS reconnects.
-user_pref("network.ssl_tokens_cache_capacity", 10240);
-
-// Larger DNS cache, longer expiration.
-user_pref("network.dnsCacheEntries", 10000);
-user_pref("network.dnsCacheExpiration", 3600);
-
-// Tab unload on low memory (default true, enforce).
-user_pref("browser.tabs.unloadOnLowMemory", true);
-
-// Linux: unload tabs when free memory drops below 20% (default 5%).
-// Gentle — only kicks in under real pressure, won't unload tabs casually.
-user_pref("browser.low_commit_space_threshold_percent", 20);
-
-// Bigger HTTP connection pool — faster page loads on multi-asset sites.
-user_pref("network.http.max-connections", 1800);
-user_pref("network.http.max-persistent-connections-per-server", 10);
-
-// Skip request pacing on fast machines.
-user_pref("network.http.pacing.requests.enabled", false);
-
-// Faster image decoding — larger chunks per pass.
-user_pref("image.mem.decode_bytes_at_a_time", 65536);
-
-// 1 GB combined media cache (default 512 MB) — fewer re-fetches on video sites.
-user_pref("media.memory_caches_combined_limit_kb", 1048576);
 
 
 /****************************************************************************
@@ -72,7 +23,7 @@ user_pref("extensions.getAddons.showPane", false);
 user_pref("extensions.htmlaboutaddons.recommendations.enabled", false);
 user_pref("browser.discovery.enabled", false);
 
-// Stop Firefox asking to be default browser.
+// Stop the browser asking to be default (xdg-settings already handles it).
 user_pref("browser.shell.checkDefaultBrowser", false);
 
 // Disable CFR ("Contextual Feature Recommender") extension/feature popups.
@@ -88,9 +39,6 @@ user_pref("browser.aboutConfig.showWarning", false);
 // Disable welcome screens after updates.
 user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.aboutwelcome.enabled", false);
-
-// New profile switcher.
-user_pref("browser.profiles.enabled", true);
 
 // Theme — allow userChrome.css / userContent.css.
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);

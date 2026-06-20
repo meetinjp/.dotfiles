@@ -35,9 +35,11 @@ fi
 # is sudo-installed by setup.sh, not stowed.
 #
 # Split by OS. COMMON stows everywhere. LINUX_ONLY is the Wayland desktop
-# (niri, kanshi), the niri-session-anchor systemd user unit, the bin/ helper
-# script (niri-screenshot, Linux-only), and firefox (its XDG path is wrong on
-# macOS, so the macOS branch links user.js into ~/Library instead of stowing).
+# (niri, kanshi), the niri-session-anchor systemd user unit, and the bin/
+# helper script (niri-screenshot, Linux-only). The Zen user.js is NOT stowed:
+# ~/.config/zen is Zen's live profile root, so stowing into it would tree-fold
+# the whole profile into the repo. link_browser_userjs symlinks the repo's
+# user.js straight into the active profile instead.
 COMMON_DIRS=(
 	ghostty
 	nvim
@@ -50,7 +52,6 @@ COMMON_DIRS=(
 )
 LINUX_ONLY_DIRS=(
 	bin
-	firefox
 	kanshi
 	niri
 	systemd
@@ -114,35 +115,70 @@ fi
 # its settings.json. Pins the Gruvbox scheme; Linux-only (no-op on macOS).
 "$DOTFILES/noctalia/apply.sh"
 
+# Zen Browser user.js — Zen's profile dir is per-install-hashed. Resolve the
+# active profile from installs.ini/profiles.ini and symlink the repo's user.js
+# into <profile>/user.js. Runs on both platforms; only the base dir differs.
+# Idempotent — safe to rerun.
+link_browser_userjs() {
+	local zen_base zen_src zen_ini zen_prof
+	# Read straight from the repo (not stowed) on both OSes — see COMMON_DIRS note.
+	zen_src="$DOTFILES/zen/.config/zen/user.js"
+	if is_macos; then
+		zen_base="$HOME/Library/Application Support/zen/Profiles"
+	else
+		zen_base="$HOME/.config/zen"
+	fi
+
+	if [[ ! -e "$zen_src" ]]; then
+		echo "  zen: no user.js source ($zen_src) — skipping."
+		return
+	fi
+	if [[ ! -d "$zen_base" ]]; then
+		echo "  zen: $zen_base missing — launch Zen once, then rerun."
+		return
+	fi
+
+	# Resolve the active profile dir: installs.ini's Default= wins for the
+	# running install; fall back to profiles.ini's first Default=1 profile.
+	# The ini files live at the zen root (parent of Profiles/ on macOS).
+	if is_macos; then zen_ini="$HOME/Library/Application Support/zen"; else zen_ini="$HOME/.config/zen"; fi
+	zen_prof=""
+	if [[ -f "$zen_ini/installs.ini" ]]; then
+		zen_prof="$(awk -F= '/^Default=/{print $2; exit}' "$zen_ini/installs.ini")"
+	fi
+	if [[ -z "$zen_prof" && -f "$zen_ini/profiles.ini" ]]; then
+		zen_prof="$(awk -F= '
+			/^\[Profile/{p=""}
+			/^Path=/{p=$2}
+			/^Default=1/{if(p){print p; exit}}' "$zen_ini/profiles.ini")"
+	fi
+	if [[ -z "$zen_prof" ]]; then
+		echo "  zen: no active profile in installs.ini/profiles.ini — launch Zen once, then rerun."
+		return
+	fi
+
+	# Paths in the ini are relative to the zen root (e.g. "abcd.Default (release)").
+	local zen_dir="$zen_ini/$zen_prof"
+	if [[ ! -d "$zen_dir" ]]; then
+		echo "  zen: resolved profile '$zen_prof' but $zen_dir missing — skipping."
+		return
+	fi
+
+	# Don't relink our own symlink onto itself; back up a real user.js first.
+	if [[ -L "$zen_dir/user.js" ]]; then
+		: # already a symlink (ours) — ln -sfn below refreshes it
+	elif [[ -e "$zen_dir/user.js" ]]; then
+		mv "$zen_dir/user.js" "$zen_dir/user.js.bak.$(date +%s)"
+		echo "  zen: backed up existing user.js → user.js.bak.*"
+	fi
+	ln -sfn "$zen_src" "$zen_dir/user.js"
+	echo "  zen: linked user.js → $zen_dir/user.js"
+}
+link_browser_userjs
+
 # macOS-only deployment for paths stow can't express (they live outside
 # ~/.config). Idempotent — safe to rerun.
 if is_macos; then
-	# Firefox: the firefox/ package mirrors the Linux XDG path
-	# (~/.config/mozilla/firefox), which macOS Firefox never reads. Symlink
-	# user.js into the real macOS profile dir instead. The profile hash is
-	# per-install, so locate the dev-edition profile at runtime.
-	ff_profiles="$HOME/Library/Application Support/Firefox/Profiles"
-	ff_src="$(find "$DOTFILES/firefox" -name user.js -print -quit 2>/dev/null || true)"
-	if [[ -z "$ff_src" ]]; then
-		echo "  firefox: no user.js in repo — skipping."
-	elif [[ ! -d "$ff_profiles" ]]; then
-		echo "  firefox: $ff_profiles missing — launch Firefox Developer Edition once, then rerun."
-	else
-		ff_prof="$(find "$ff_profiles" -maxdepth 1 -type d -name '*.dev-edition-default' -print -quit 2>/dev/null || true)"
-		if [[ -z "$ff_prof" ]]; then
-			echo "  firefox: no *.dev-edition-default profile yet — launch FDE once, then rerun."
-		else
-			# Back up a pre-existing real user.js (not our own symlink) so a
-			# hand-rolled one is never silently clobbered.
-			if [[ -e "$ff_prof/user.js" && ! -L "$ff_prof/user.js" ]]; then
-				mv "$ff_prof/user.js" "$ff_prof/user.js.bak.$(date +%s)"
-				echo "  firefox: backed up existing user.js → user.js.bak.*"
-			fi
-			ln -sfn "$ff_src" "$ff_prof/user.js"
-			echo "  firefox: linked user.js → $ff_prof/user.js"
-		fi
-	fi
-
 	# Ghostty: layer the macOS overrides (cmd-key idioms, native titlebar,
 	# quick-terminal rebind) on top of the shared base config. Ghostty reads
 	# the stowed ~/.config/ghostty/config first, then the Application Support

@@ -59,7 +59,7 @@ export GIT_EDITOR="nvim"
 # etc.) instead of going through xdg-open. macOS has no such command on PATH
 # and apps launch via `open`, so leave $BROWSER unset there (a multi-word
 # "open -a ..." value breaks tools that exec $BROWSER as a single argv).
-[[ "$OSTYPE" != darwin* ]] && export BROWSER="firefox-developer-edition"
+[[ "$OSTYPE" != darwin* ]] && export BROWSER="zen-browser"
 
 # Aliases. eza is the ls replacement (pacman/brew); guard so the shell stays
 # usable on a fresh box before `eza` is installed (e.g. new macOS pre-brew) —

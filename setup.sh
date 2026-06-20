@@ -22,7 +22,7 @@ set -euo pipefail
 #  11. Prints the public keys + a checklist of what to do next.
 #
 # Apps deliberately NOT touched here: music player (install/pick at will,
-# not part of the dotfile contract), browsers beyond firefox-developer-edition,
+# not part of the dotfile contract), browsers beyond the default (Zen),
 # any GUI app whose state lives entirely in its own settings UI.
 #
 # Idempotent — safe to rerun. Each step short-circuits if its target
