@@ -82,10 +82,17 @@ sudo pacman -S --needed \
     pavucontrol playerctl pamixer power-profiles-daemon fwupd udisks2 keyd \
     xdg-utils libnotify \
     zsh tmux starship zsh-autosuggestions zsh-syntax-highlighting \
-    neovim ripgrep eza yazi curl unzip gnupg gcc python python-pip \
-    nodejs npm rustup go docker docker-compose \
+    neovim ripgrep eza yazi curl unzip gnupg gcc github-cli python \
+    rustup go docker docker-compose \
     ttf-firacode-nerd noto-fonts noto-fonts-emoji noto-fonts-cjk
 ```
+
+> **Toolchain choices** (deliberately *not* installed from pacman): **Node** comes
+> from `nvm` (per-project versions) + `bun`; system `nodejs`/`npm` are omitted.
+> **Python** uses `uv` (pip + venv replacement); system `python-pip` is omitted.
+> `rustup` is kept mainly as the build dep for `tailor-gui`; `go` backs the nvim
+> `gopls` LSP. `docker`/`docker-compose` are optional dev runtimes (no service is
+> auto-enabled). Both `nvm` and `bun` install via the curl scripts below.
 
 AUR (CachyOS ships `paru` by default):
 
@@ -464,6 +471,13 @@ this model — flash those manually from your TUXEDO account. `fwupd` is still
 worth having for SSD/peripheral firmware (`fwupdmgr refresh && fwupdmgr update`).
 No kernel cmdline tweaks are needed: `amd_pstate` is already in `active` mode and
 `s2idle` is the correct suspend state for Strix Point (do **not** force `deep`).
+
+**CPU power profiles.** The stack is `amd-pstate-epp` + **power-profiles-daemon**
+(the standard; do not add TLP/tuned/cpupower — they conflict). The Noctalia bar's
+PowerProfile widget toggles ppd: `balanced` biases toward power saving (EPP
+`balance_power`, lazy clock ramp), `performance` ramps fully. The selection
+persists across reboots via `/var/lib/power-profiles-daemon/state.ini`, so set
+**Performance** once for a snappy default — no custom service needed.
 
 ## Bluetooth
 
