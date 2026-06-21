@@ -8,7 +8,7 @@
 //
 // Live-reloads on save. Validate with: niri validate
 // Action reference:                    niri msg action
-// Cheat sheet inside the session:      Alt + Shift + /
+// Cheat sheet inside the session:      Mod + Shift + /
 
 // ─── INPUT ───────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ window-rule {
 }
 
 // ── Ghostty ──
-// at-startup ws1 spawn → fullscreen. Every later manual Alt+Q → maximized.
+// at-startup ws1 spawn → fullscreen. Every later manual Mod+Q → maximized.
 // Two separate rules keyed on at-startup so they never collide.
 window-rule {
     match app-id="com\\.mitchellh\\.ghostty" at-startup=true
@@ -193,7 +193,7 @@ switch-events {
 }
 
 // Workspaces are dynamic per-monitor stacks (niri default). No persistent
-// declarations — `Alt+N` targets the Nth ws of the currently focused
+// declarations — `Mod+N` targets the Nth ws of the currently focused
 // monitor. Moving a workspace between monitors renumbers it into the
 // destination's stack. The at-startup window-rules below still place
 // ghostty + zen on ws1 + ws2 because niri auto-creates them on the
@@ -229,126 +229,126 @@ spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || ghostty"
 spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || zen-browser"
 
 // ─── KEYBINDINGS ─────────────────────────────────────────────────────────────
-// Mod = Alt (matches your old Hyprland muscle memory).
-// Super+L for lock so it doesn't collide with Alt+L (focus-column-right).
+// Mod = Super (the Tux / Windows key) — niri's default modifier.
+// Lock is Mod+Escape; Mod+L is focus-column-right so lock can't sit there.
 // Noctalia actions go through `qs -c noctalia-shell ipc call <module> <verb>`.
 
 binds {
-    Alt+Shift+Slash      { show-hotkey-overlay; }
+    Mod+Shift+Slash      { show-hotkey-overlay; }
 
     // Launchers
-    Alt+Q                hotkey-overlay-title="Terminal"        { spawn "ghostty"; }
-    Alt+E                hotkey-overlay-title="File manager"    { spawn "ghostty" "-e" "yazi"; }
-    Alt+Space            hotkey-overlay-title="App launcher"    { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
-    Alt+Shift+Q          hotkey-overlay-title="Session menu"    { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
-    Super+L              allow-when-locked=true                 { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
+    Mod+Q                hotkey-overlay-title="Terminal"        { spawn "ghostty"; }
+    Mod+E                hotkey-overlay-title="File manager"    { spawn "ghostty" "-e" "yazi"; }
+    Mod+Space            hotkey-overlay-title="App launcher"    { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
+    Mod+Shift+Q          hotkey-overlay-title="Session menu"    { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
+    Mod+Escape           allow-when-locked=true                 { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
 
     // Session — quit only via Ctrl+Alt+Delete (no easy mis-hit combo).
-    Alt+C                { close-window; }
+    Mod+C                { close-window; }
     Ctrl+Alt+Delete      { quit; }
-    Alt+Shift+P          { power-off-monitors; }
+    Mod+Shift+P          { power-off-monitors; }
 
     // Focus — vim-style (h/l = column, j/k = window in column).
-    Alt+H                { focus-column-left; }
-    Alt+L                { focus-column-right; }
-    Alt+J                { focus-window-down; }
-    Alt+K                { focus-window-up; }
-    Alt+Left             { focus-column-left; }
-    Alt+Right            { focus-column-right; }
-    Alt+Down             { focus-window-down; }
-    Alt+Up               { focus-window-up; }
-    Alt+Home             { focus-column-first; }
-    Alt+End              { focus-column-last; }
+    Mod+H                { focus-column-left; }
+    Mod+L                { focus-column-right; }
+    Mod+J                { focus-window-down; }
+    Mod+K                { focus-window-up; }
+    Mod+Left             { focus-column-left; }
+    Mod+Right            { focus-column-right; }
+    Mod+Down             { focus-window-down; }
+    Mod+Up               { focus-window-up; }
+    Mod+Home             { focus-column-first; }
+    Mod+End              { focus-column-last; }
 
     // Move within workspace
-    Alt+Ctrl+H           { move-column-left; }
-    Alt+Ctrl+L           { move-column-right; }
-    Alt+Ctrl+J           { move-window-down; }
-    Alt+Ctrl+K           { move-window-up; }
-    Alt+Ctrl+Home        { move-column-to-first; }
-    Alt+Ctrl+End         { move-column-to-last; }
+    Mod+Ctrl+H           { move-column-left; }
+    Mod+Ctrl+L           { move-column-right; }
+    Mod+Ctrl+J           { move-window-down; }
+    Mod+Ctrl+K           { move-window-up; }
+    Mod+Ctrl+Home        { move-column-to-first; }
+    Mod+Ctrl+End         { move-column-to-last; }
 
     // Workspaces — integer N targets the Nth ws of the focused monitor.
     // Stack is dynamic per-monitor; no Hyprland-style global identity.
-    Alt+1                { focus-workspace 1; }
-    Alt+2                { focus-workspace 2; }
-    Alt+3                { focus-workspace 3; }
-    Alt+4                { focus-workspace 4; }
-    Alt+5                { focus-workspace 5; }
-    Alt+6                { focus-workspace 6; }
-    Alt+7                { focus-workspace 7; }
-    Alt+8                { focus-workspace 8; }
-    Alt+9                { focus-workspace 9; }
-    Alt+Shift+1          { move-column-to-workspace 1; }
-    Alt+Shift+2          { move-column-to-workspace 2; }
-    Alt+Shift+3          { move-column-to-workspace 3; }
-    Alt+Shift+4          { move-column-to-workspace 4; }
-    Alt+Shift+5          { move-column-to-workspace 5; }
-    Alt+Shift+6          { move-column-to-workspace 6; }
-    Alt+Shift+7          { move-column-to-workspace 7; }
-    Alt+Shift+8          { move-column-to-workspace 8; }
-    Alt+Shift+9          { move-column-to-workspace 9; }
+    Mod+1                { focus-workspace 1; }
+    Mod+2                { focus-workspace 2; }
+    Mod+3                { focus-workspace 3; }
+    Mod+4                { focus-workspace 4; }
+    Mod+5                { focus-workspace 5; }
+    Mod+6                { focus-workspace 6; }
+    Mod+7                { focus-workspace 7; }
+    Mod+8                { focus-workspace 8; }
+    Mod+9                { focus-workspace 9; }
+    Mod+Shift+1          { move-column-to-workspace 1; }
+    Mod+Shift+2          { move-column-to-workspace 2; }
+    Mod+Shift+3          { move-column-to-workspace 3; }
+    Mod+Shift+4          { move-column-to-workspace 4; }
+    Mod+Shift+5          { move-column-to-workspace 5; }
+    Mod+Shift+6          { move-column-to-workspace 6; }
+    Mod+Shift+7          { move-column-to-workspace 7; }
+    Mod+Shift+8          { move-column-to-workspace 8; }
+    Mod+Shift+9          { move-column-to-workspace 9; }
 
-    Alt+U                { focus-workspace-down; }
-    Alt+I                { focus-workspace-up; }
-    Alt+Page_Down        { focus-workspace-down; }
-    Alt+Page_Up          { focus-workspace-up; }
-    Alt+Ctrl+Page_Down   { move-column-to-workspace-down; }
-    Alt+Ctrl+Page_Up     { move-column-to-workspace-up; }
+    Mod+U                { focus-workspace-down; }
+    Mod+I                { focus-workspace-up; }
+    Mod+Page_Down        { focus-workspace-down; }
+    Mod+Page_Up          { focus-workspace-up; }
+    Mod+Ctrl+Page_Down   { move-column-to-workspace-down; }
+    Mod+Ctrl+Page_Up     { move-column-to-workspace-up; }
 
-    Alt+WheelScrollDown  cooldown-ms=100 { focus-workspace-down; }
-    Alt+WheelScrollUp    cooldown-ms=100 { focus-workspace-up; }
+    Mod+WheelScrollDown  cooldown-ms=100 { focus-workspace-down; }
+    Mod+WheelScrollUp    cooldown-ms=100 { focus-workspace-up; }
 
     // Multi-monitor (laptop + external)
-    // Focus monitor:  Alt + Shift + hjkl
-    // Move workspace: Alt + Shift + arrow         (entire ws + its columns)
-    // Move column:    Alt + Shift + Ctrl + hjkl/arrow
-    Alt+Shift+H            { focus-monitor-left; }
-    Alt+Shift+L            { focus-monitor-right; }
-    Alt+Shift+J            { focus-monitor-down; }
-    Alt+Shift+K            { focus-monitor-up; }
-    Alt+Shift+Left         { move-workspace-to-monitor-left; }
-    Alt+Shift+Right        { move-workspace-to-monitor-right; }
-    Alt+Shift+Up           { move-workspace-to-monitor-up; }
-    Alt+Shift+Down         { move-workspace-to-monitor-down; }
-    Alt+Shift+Ctrl+H       { move-column-to-monitor-left; }
-    Alt+Shift+Ctrl+L       { move-column-to-monitor-right; }
-    Alt+Shift+Ctrl+J       { move-column-to-monitor-down; }
-    Alt+Shift+Ctrl+K       { move-column-to-monitor-up; }
-    Alt+Shift+Ctrl+Left    { move-column-to-monitor-left; }
-    Alt+Shift+Ctrl+Right   { move-column-to-monitor-right; }
-    Alt+Shift+Ctrl+Up      { move-column-to-monitor-up; }
-    Alt+Shift+Ctrl+Down    { move-column-to-monitor-down; }
+    // Focus monitor:  Mod + Shift + hjkl
+    // Move workspace: Mod + Shift + arrow         (entire ws + its columns)
+    // Move column:    Mod + Shift + Ctrl + hjkl/arrow
+    Mod+Shift+H            { focus-monitor-left; }
+    Mod+Shift+L            { focus-monitor-right; }
+    Mod+Shift+J            { focus-monitor-down; }
+    Mod+Shift+K            { focus-monitor-up; }
+    Mod+Shift+Left         { move-workspace-to-monitor-left; }
+    Mod+Shift+Right        { move-workspace-to-monitor-right; }
+    Mod+Shift+Up           { move-workspace-to-monitor-up; }
+    Mod+Shift+Down         { move-workspace-to-monitor-down; }
+    Mod+Shift+Ctrl+H       { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+L       { move-column-to-monitor-right; }
+    Mod+Shift+Ctrl+J       { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+K       { move-column-to-monitor-up; }
+    Mod+Shift+Ctrl+Left    { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+Right   { move-column-to-monitor-right; }
+    Mod+Shift+Ctrl+Up      { move-column-to-monitor-up; }
+    Mod+Shift+Ctrl+Down    { move-column-to-monitor-down; }
 
     // Consume / expel — niri's signature column manipulation.
-    Alt+Comma            { consume-window-into-column; }
-    Alt+Period           { expel-window-from-column; }
-    Alt+BracketLeft      { consume-or-expel-window-left; }
-    Alt+BracketRight     { consume-or-expel-window-right; }
+    Mod+Comma            { consume-window-into-column; }
+    Mod+Period           { expel-window-from-column; }
+    Mod+BracketLeft      { consume-or-expel-window-left; }
+    Mod+BracketRight     { consume-or-expel-window-right; }
 
     // Column / window sizing
-    Alt+R                { switch-preset-column-width; }
-    Alt+Shift+R          { switch-preset-window-height; }
-    Alt+Minus            { set-column-width "-10%"; }
-    Alt+Equal            { set-column-width "+10%"; }
-    Alt+Ctrl+Minus       { set-window-height "-10%"; }
-    Alt+Ctrl+Equal       { set-window-height "+10%"; }
+    Mod+R                { switch-preset-column-width; }
+    Mod+Shift+R          { switch-preset-window-height; }
+    Mod+Minus            { set-column-width "-10%"; }
+    Mod+Equal            { set-column-width "+10%"; }
+    Mod+Ctrl+Minus       { set-window-height "-10%"; }
+    Mod+Ctrl+Equal       { set-window-height "+10%"; }
 
     // Maximize / fullscreen / center
-    Alt+F                { maximize-column; }
-    Alt+Shift+F          { fullscreen-window; }
-    Alt+Ctrl+F           { expand-column-to-available-width; }
-    Alt+Ctrl+C           { center-column; }
+    Mod+F                { maximize-column; }
+    Mod+Shift+F          { fullscreen-window; }
+    Mod+Ctrl+F           { expand-column-to-available-width; }
+    Mod+Ctrl+C           { center-column; }
 
     // Layout modes
-    Alt+W                { toggle-column-tabbed-display; }
-    Alt+V                { toggle-window-floating; }
-    Alt+Shift+V          { switch-focus-between-floating-and-tiling; }
-    Alt+O                { toggle-overview; }
+    Mod+W                { toggle-column-tabbed-display; }
+    Mod+V                { toggle-window-floating; }
+    Mod+Shift+V          { switch-focus-between-floating-and-tiling; }
+    Mod+O                { toggle-overview; }
 
     // Scratchpad on workspace 10.
-    Alt+S                { focus-workspace 10; }
-    Alt+Shift+S          { move-column-to-workspace 10; }
+    Mod+S                { focus-workspace 10; }
+    Mod+Shift+S          { move-column-to-workspace 10; }
 
     // Multimedia — routed through Noctalia IPC so OSD appears.
     XF86AudioRaiseVolume  allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume increase"; }
@@ -365,5 +365,5 @@ binds {
     // Screenshots — niri's built-in interactive UI.
     Print                { screenshot; }
     Ctrl+Print           { screenshot-screen; }
-    Alt+Print            { screenshot-window; }
+    Mod+Print            { screenshot-window; }
 }

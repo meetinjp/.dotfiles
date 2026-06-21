@@ -376,25 +376,26 @@ different public formats:
 
 ### niri
 
-- `Alt + Shift + /` — show the keybind overlay (read this first).
-- `Alt + Q` — open Ghostty.
-- `Alt + E` — open Yazi (file manager in Ghostty).
-- `Alt + D` — Noctalia app launcher.
-- `Alt + Shift + Q` — Noctalia session menu (logout / reboot / shutdown).
-- `Alt + H/J/K/L` — focus column-left / window-down / window-up / column-right.
-- `Alt + Ctrl + H/J/K/L` — move the focused column/window in that direction.
-- `Alt + 1..9` — focus workspace; `Alt + Shift + 1..9` — move column to.
-- `Alt + Shift + arrows` — focus monitor in that direction; add `Ctrl` to
+- `Super + Shift + /` — show the keybind overlay (read this first).
+- `Super + Q` — open Ghostty.
+- `Super + E` — open Yazi (file manager in Ghostty).
+- `Super + Space` — Noctalia app launcher.
+- `Super + Shift + Q` — Noctalia session menu (logout / reboot / shutdown).
+- `Super + H/J/K/L` — focus column-left / window-down / window-up / column-right.
+- `Super + Ctrl + H/J/K/L` — move the focused column/window in that direction.
+- `Super + 1..9` — focus workspace; `Super + Shift + 1..9` — move column to.
+- `Super + Shift + arrows` — focus monitor in that direction; add `Ctrl` to
   move the focused column across monitors. At startup Ghostty lands on ws1
   and Zen on ws2 of the monitor focused at spawn time.
-- `Alt + ,` / `Alt + .` — consume/expel a window from the current column.
-- `Alt + R` — cycle preset column widths (1/3 → 1/2 → 2/3).
-- `Alt + F` — maximize column; `Alt + Shift + F` — true fullscreen.
-- `Alt + W` — toggle column tabbed display.
-- `Alt + V` — toggle floating.
-- `Alt + O` — overview.
-- `Alt + C` — close window.
-- `Super + L` — Noctalia lock (uses Super not Alt so it doesn't shadow focus-right).
+- `Super + ,` / `Super + .` — consume/expel a window from the current column.
+- `Super + R` — cycle preset column widths (1/3 → 1/2 → 2/3).
+- `Super + F` — maximize column; `Super + Shift + F` — true fullscreen.
+- `Super + W` — toggle column tabbed display.
+- `Super + V` — toggle floating.
+- `Super + O` — overview.
+- `Super + C` — close window.
+- `Super + Escape` — Noctalia lock (`Super + L` is focus-column-right).
+- `Ctrl + Alt + Delete` — quit niri (deliberately a hard-to-mishit chord).
 - `Print` — interactive screenshot (region by default).
 - Keyboard backlight: **`Fn + Space`** (native, EC-handled; defaults to off at
   boot via a udev rule — see TUXEDO hardware).
@@ -519,7 +520,7 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
   `gpgconf --list-dirs agent-ssh-socket`. If not, restart the shell or
   run `gpgconf --launch gpg-agent`.
 - Niri starts on a blank screen with cursor only: Noctalia didn't
-  launch. Open Ghostty with `Alt+Q` and run `qs -c noctalia-shell &`
+  launch. Open Ghostty with `Super+Q` and run `qs -c noctalia-shell &`
   to start it manually. If that errors, check
   `pacman -Qq cachyos-niri-noctalia noctalia-qs noctalia-shell`.
 - External monitor doesn't show up: `niri msg outputs` lists the real
