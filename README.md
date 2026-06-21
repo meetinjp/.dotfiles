@@ -1,14 +1,23 @@
 # .dotfiles
 
-Personal config for [CachyOS](https://cachyos.org/) on a **TUXEDO InfinityBook
-Pro 14 (AMD Gen10)** laptop. Wayland
-session is [niri](https://github.com/niri-wm/niri); shell-on-niri is
-[Noctalia](https://github.com/noctalia-dev/noctalia-shell) (Quickshell
-bar + launcher + notifications + lock + polkit + wallpaper rolled into
-one); terminal is [Ghostty](https://ghostty.org/); shell is zsh. No
-display manager — getty@tty1 autologins, and zsh's `.zprofile` execs
-`niri --session` directly. Managed with
+Personal config for a **TUXEDO InfinityBook Pro 14 (AMD Gen10)** laptop. The
+desktop is [niri](https://github.com/niri-wm/niri) (Wayland scrollable-tiling)
+with [Noctalia](https://github.com/noctalia-dev/noctalia-shell) (Quickshell
+bar + launcher + notifications + lock + polkit + wallpaper), terminal
+[Ghostty](https://ghostty.org/), shell zsh. Managed with
 [GNU stow](https://www.gnu.org/software/stow/).
+
+**Two Linux targets**, auto-detected by `install.sh`/`setup.sh` via
+`/etc/os-release`:
+
+- [**TUXEDO OS**](https://www.tuxedocomputers.com/en/TUXEDO-OS_1.tuxedo) (Ubuntu
+  24.04 base, `apt`) — the path going forward: hardware is supported natively
+  and niri runs as a session next to the stock **KDE Plasma** (kept as fallback).
+- [**CachyOS**](https://cachyos.org/) (Arch, `pacman`, no display manager —
+  getty@tty1 → `niri --session`) — the original/legacy path, **slated for
+  removal**.
+
+(The CLI/dev half is also cross-platform to macOS.)
 
 > **On macOS?** The CLI/dev half of this repo is cross-platform; the Linux
 > desktop is not. Skip the CachyOS/pacman sections below and jump to
@@ -37,6 +46,7 @@ Default browser is Zen (`zen-browser`), set both via xdg-mime and the
 | ----------- | ------------------------------------------------------------ | ---------------------- |
 | `bin/`      | `~/.local/bin/` scripts (`niri-screenshot`)                  | stowed                 |
 | `claude/`   | Claude Code config patcher + plugin installer                | run by `install.sh`    |
+| `debian/`   | TUXEDO OS (Ubuntu) provisioning — apt + PPAs + scripts/cargo  | run by `install.sh`    |
 | `ghostty/`  | GPU-accelerated terminal (Gruvbox Dark Hard, zsh integration)| stowed                 |
 | `git/`      | gitconfig templates (identity injected at setup time)        | rendered by `setup.sh` |
 | `kanshi/`   | auto-switch monitor profiles (laptop / docked)               | stowed                 |
@@ -61,7 +71,38 @@ configured at runtime via its own settings UI and live-mutates
 same pattern as `claude/apply.sh`); everything else stays Noctalia's own
 defaults. It also applies live via Noctalia's IPC if the shell is running.
 
-## Install
+## Install — TUXEDO OS (Ubuntu, primary)
+
+Tuxedo OS ships the hardware support (tuxedo-drivers, Tuxedo Control Center, the
+TUXEDO kernel, fan / charge / keyboard-backlight) **natively**, so the dotfiles
+only add the niri desktop stack on top and leave KDE Plasma as the fallback.
+
+```sh
+git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
+~/.dotfiles/install.sh    # detects apt → runs debian/provision.sh, then stows
+~/.dotfiles/setup.sh      # identity/GPG/locale/etc; skips the TUXEDO-hw + tty1 bits
+```
+
+`debian/provision.sh` installs: **niri** (`ppa:avengemedia/danklinux` — ships the
+SDDM session file), **Ghostty** (`ppa:mkasberg/ghostty-ubuntu`), **keyd**
+(`ppa:keyd-team/ppa`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh +
+plugins, kanshi, wlsunset, grim/slurp, portals, …), and the non-apt pieces via
+official scripts / cargo / tarball (**starship, yazi, xwayland-satellite,
+FiraCode Nerd Font, Zen, Go, Rust, Docker, uv/nvm/bun**).
+
+`setup.sh` **skips** the manual TUXEDO hardware step and the no-display-manager
+tty1→niri model. **At the SDDM login screen, pick the "Niri" session** — KDE
+Plasma stays available as the fallback.
+
+> ⚠️ **Not yet validated on real Tuxedo OS hardware** (authored from a verified
+> research spec). Expect to live-tweak two things: the niri PPA resolving
+> cleanly, and **Noctalia** (the bar/launcher) — it builds from source and needs
+> **Qt ≥ 6.6** (Tuxedo OS backports it; stock Ubuntu 24.04 has 6.4, where the
+> build self-skips with a warning and you get bare niri until then). Version pins
+> (`GO_VER`, `NVM_TAG`, Noctalia tag) live at the top of `debian/provision.sh` —
+> bump them to current before running.
+
+## Install — CachyOS (Arch, legacy — slated for removal)
 
 ### 1. Base packages
 

@@ -36,9 +36,11 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 # because zsh-syntax-highlighting must be sourced last per upstream docs.
 for _plugin in \
     /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
     "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
     /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
     /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
     "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
     /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 do
@@ -79,6 +81,10 @@ fi
 # PATH
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.cargo/bin"
+# Go — Debian/Ubuntu (Tuxedo OS) installs the official tarball to /usr/local/go;
+# `go install` drops binaries in ~/go/bin. Guarded so it's a no-op elsewhere.
+[[ -d /usr/local/go/bin ]] && export PATH="$PATH:/usr/local/go/bin"
+[[ -d "$HOME/go/bin" ]] && export PATH="$PATH:$HOME/go/bin"
 
 # Ripgrep
 [[ -f "$HOME/.ripgreprc" ]] && export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"

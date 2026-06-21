@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-is_macos() { [[ "$(uname -s)" == Darwin ]]; }
+is_macos()  { [[ "$(uname -s)" == Darwin ]]; }
+# Distro family via /etc/os-release. CachyOS reports ID_LIKE=arch; TUXEDO OS
+# reports ID=ubuntu (ID_LIKE=debian). macOS matches neither.
+is_debian() { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*(debian|ubuntu)' /etc/os-release 2>/dev/null; }
+is_arch()   { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*arch' /etc/os-release 2>/dev/null; }
 
 # perl (used by stow) spams locale warnings if LANG points at an ungenerated
 # locale. Force one that always exists: glibc ships C.UTF-8; macOS/BSD libc
@@ -22,6 +26,13 @@ if is_macos && command -v brew &>/dev/null; then
 	echo "Installing Homebrew packages (brew bundle)..."
 	brew bundle --file="$DOTFILES/Brewfile" || \
 		echo "  brew bundle reported errors — continuing (rerun it manually if needed)."
+elif is_debian; then
+	# TUXEDO OS / Ubuntu: provision the niri stack (apt + PPAs + scripts/cargo).
+	# This also installs `stow`, so it must run before the stow check below.
+	# On Arch/CachyOS packages are installed manually (see README) — no auto step.
+	echo "Provisioning Debian/Ubuntu packages (debian/provision.sh)..."
+	"$DOTFILES/debian/provision.sh" || \
+		echo "  provisioning reported warnings — continuing (review them, rerun if needed)."
 fi
 
 if ! command -v stow &>/dev/null; then
@@ -123,8 +134,12 @@ link_browser_userjs() {
 	local zen_base zen_src zen_ini zen_prof
 	# Read straight from the repo (not stowed) on both OSes — see COMMON_DIRS note.
 	zen_src="$DOTFILES/zen/.config/zen/user.js"
+	# Profile root differs: macOS App Support; Debian/tarball Zen uses ~/.zen
+	# (Firefox-fork layout); Arch's zen-browser-bin uses ~/.config/zen.
 	if is_macos; then
 		zen_base="$HOME/Library/Application Support/zen/Profiles"
+	elif is_debian; then
+		zen_base="$HOME/.zen"
 	else
 		zen_base="$HOME/.config/zen"
 	fi
@@ -141,7 +156,9 @@ link_browser_userjs() {
 	# Resolve the active profile dir: installs.ini's Default= wins for the
 	# running install; fall back to profiles.ini's first Default=1 profile.
 	# The ini files live at the zen root (parent of Profiles/ on macOS).
-	if is_macos; then zen_ini="$HOME/Library/Application Support/zen"; else zen_ini="$HOME/.config/zen"; fi
+	if is_macos; then zen_ini="$HOME/Library/Application Support/zen"
+	elif is_debian; then zen_ini="$HOME/.zen"
+	else zen_ini="$HOME/.config/zen"; fi
 	zen_prof=""
 	if [[ -f "$zen_ini/installs.ini" ]]; then
 		zen_prof="$(awk -F= '/^Default=/{print $2; exit}' "$zen_ini/installs.ini")"

@@ -29,7 +29,10 @@ set -euo pipefail
 # already exists.
 # ---------------------------------------------------------------------------
 
-is_macos() { [[ "$(uname -s)" == Darwin ]]; }
+is_macos()  { [[ "$(uname -s)" == Darwin ]]; }
+# Distro family (Linux). CachyOS → ID_LIKE=arch; TUXEDO OS → ID=ubuntu/ID_LIKE=debian.
+is_debian() { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*(debian|ubuntu)' /etc/os-release 2>/dev/null; }
+is_arch()   { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*arch' /etc/os-release 2>/dev/null; }
 
 # Monotonic-ish timestamp for backup filenames. GNU date supports %N
 # (nanoseconds); BSD/macOS date does not and echoes a literal "N", so detect
@@ -149,6 +152,16 @@ banner "3/10  Locale (en_US.UTF-8)"
 # don't spam warnings.
 if is_macos; then
 	echo "  macOS ships en_US.UTF-8 prebuilt (no locale-gen) — skipping."
+elif is_debian; then
+	# Ubuntu's locale-gen takes the locale as an argument; LANG lives in
+	# /etc/default/locale (via update-locale), NOT /etc/locale.conf.
+	if locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
+		echo "  already present — skipping."
+	elif confirm "Generate en_US.UTF-8? (needs sudo) [Y/n]"; then
+		sudo locale-gen en_US.UTF-8
+		sudo update-locale LANG=en_US.UTF-8
+		echo "  generated (update-locale set LANG)."
+	fi
 elif command -v locale-gen &>/dev/null && ! locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
 	if confirm "Generate en_US.UTF-8? (needs sudo) [Y/n]"; then
 		if ! grep -q '^en_US\.UTF-8 UTF-8' /etc/locale.gen 2>/dev/null; then
@@ -340,6 +353,9 @@ banner "7/10  TUXEDO hardware (drivers + fan/charge control)"
 # Skipped on macOS and on non-TUXEDO hardware.
 if is_macos; then
 	echo "  macOS — no TUXEDO drivers. Skipping."
+elif is_debian; then
+	echo "  TUXEDO OS / Debian ships tuxedo-drivers + Tuxedo Control Center + the"
+	echo "  TUXEDO kernel natively — skipping all manual hardware enablement."
 elif [[ "$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)" != *TUXEDO* ]]; then
 	echo "  not a TUXEDO machine (sys_vendor != TUXEDO) — skipping."
 elif ! command -v paru &>/dev/null; then
@@ -500,6 +516,16 @@ if [[ -f "$FISH_CFG" ]] && ! grep -q 'function fish_greeting; *end' "$FISH_CFG";
 	echo "  silenced fish fastfetch greeting in $FISH_CFG."
 fi
 
+# DM model diverges by distro:
+#   CachyOS — no display manager: disable any DM + getty@tty1 autologin, and
+#     zsh's .zprofile execs niri --session on tty1 (handled below).
+#   TUXEDO OS / Debian — keep SDDM; niri is installed as a selectable Wayland
+#     session (debian/provision.sh). Pick "Niri" at login; KDE Plasma is the
+#     fallback. So we do NOT disable the DM or write a getty autologin here.
+if is_debian; then
+	echo "  Debian/Tuxedo OS: SDDM stays; niri is a login session, not a tty1 handoff."
+	echo "  Pick the 'Niri' session at the SDDM screen (KDE Plasma = fallback)."
+else
 OVERRIDE_DIR=/etc/systemd/system/getty@tty1.service.d
 OVERRIDE_FILE="$OVERRIDE_DIR/autologin.conf"
 
@@ -535,6 +561,7 @@ EOF
 		sudo systemctl daemon-reload
 		echo "  wrote $OVERRIDE_FILE (autologin user = $CURRENT_USER)"
 	fi
+fi
 fi
 fi
 
