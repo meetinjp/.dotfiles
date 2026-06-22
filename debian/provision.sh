@@ -25,6 +25,7 @@ set -uo pipefail
 GO_VER="${GO_VER:-1.26.2}"                 # https://go.dev/dl/
 NVM_TAG="${NVM_TAG:-v0.40.5}"              # https://github.com/nvm-sh/nvm/tags
 NOCTALIA_QS_TAG="${NOCTALIA_QS_TAG:-}"     # pin a tag from noctalia-dev/noctalia-qs (empty = latest tag)
+NIRI_TAG="${NIRI_TAG:-v26.04}"             # https://github.com/YaLTeR/niri/tags (built from source — no apt pkg on noble)
 
 log()  { printf '  \033[1m%s\033[0m\n' "$*"; }
 warn() { printf '  \033[33m! %s\033[0m\n' "$*" >&2; }
@@ -47,8 +48,11 @@ APT_PKGS=(
 	libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev
 	libinput-dev libdbus-1-dev libsystemd-dev libseat-dev libpipewire-0.3-dev
 	libpango1.0-dev libdisplay-info-dev
-	qt6-base-dev qt6-declarative-dev qt6-shadertools-dev spirv-tools libcli11-dev
-	qt6-wayland wayland-protocols
+	qt6-base-dev qt6-declarative-dev qt6-declarative-private-dev qt6-shadertools-dev
+	qt6-svg-dev qt6-wayland qt6-wayland-dev qt6-wayland-private-dev
+	spirv-tools libcli11-dev wayland-protocols
+	libdrm-dev libjemalloc-dev libpam0g-dev libxcb-cursor-dev libclang-dev
+	libpolkit-agent-1-dev libpolkit-gobject-1-dev
 	kanshi wlsunset wl-clipboard cliphist grim slurp brightnessctl playerctl
 	pamixer pavucontrol xwayland
 	xdg-desktop-portal-gnome xdg-desktop-portal-gtk xdg-utils gnome-keyring
@@ -69,20 +73,20 @@ if have fdfind && ! have fd; then
 	log "linked fd → fdfind"
 fi
 
-# ── 2. PPAs: niri, ghostty, keyd ────────────────────────────────────────────
+# ── 2. PPAs: ghostty, keyd (niri is built from source — see § 3b below) ─────
 add_ppa() {  # add_ppa <ppa> <apt-pkg> [check-cmd]
 	local ppa="$1" pkg="$2" check="${3:-$2}"
 	have "$check" && { log "$pkg already installed."; return; }
-	log "adding $ppa + installing $pkg… [LIVE: verify PPA resolves on the box]"
+	log "adding $ppa + installing $pkg…"
 	sudo add-apt-repository -y "$ppa" || { warn "add-apt-repository $ppa failed"; return; }
 	sudo apt-get update -y || true
 	sudo apt-get install -y "$pkg" || warn "$pkg install failed"
 }
-# niri ships /usr/share/wayland-sessions/niri.desktop → SDDM lists it; KDE stays.
-add_ppa ppa:avengemedia/danklinux niri
 add_ppa ppa:mkasberg/ghostty-ubuntu ghostty
-# keyd: setup.sh step 6 keys off `command -v keyd` and writes /etc/keyd/default.conf.
-add_ppa ppa:keyd-team/ppa keyd
+# keyd: the keyd-team PPA installs the binary as `keyd.rvaiya` (the service is
+# still `keyd`). setup.sh step 6 detects either name and writes
+# /etc/keyd/default.conf, then restarts the keyd service.
+add_ppa ppa:keyd-team/ppa keyd keyd.rvaiya
 
 # ── 3. Rust toolchain (for cargo-built tools + niri source fallback) ────────
 if ! have rustup; then
@@ -100,8 +104,63 @@ cargo_install() {  # cargo_install <bin> <crate...>
 	log "cargo install $* …"
 	cargo install --locked "$@" || warn "cargo install $bin failed"
 }
-cargo_install yazi yazi-fm yazi-cli
-cargo_install xwayland-satellite xwayland-satellite
+# yazi: prefer the prebuilt release binary — the cargo build pins a very recent
+# rustc and can fail on the distro toolchain. Falls back to cargo on non-amd64
+# or if the download fails.
+install_yazi() {
+	have yazi && { log "yazi already installed."; return; }
+	if [[ "$ARCH_DEB" == amd64 ]]; then
+		local d; d="$(mktemp -d)"
+		if curl -fsSL https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-gnu.zip -o "$d/y.zip" \
+			&& unzip -oq "$d/y.zip" -d "$d"; then
+			mkdir -p "$HOME/.local/bin"
+			find "$d" -type f -name yazi -exec install -m755 {} "$HOME/.local/bin/yazi" \;
+			find "$d" -type f -name ya   -exec install -m755 {} "$HOME/.local/bin/ya"   \;
+			rm -rf "$d"; log "installed yazi (prebuilt release)."; return
+		fi
+		rm -rf "$d"; warn "yazi prebuilt download failed — falling back to cargo…"
+	fi
+	cargo_install yazi yazi-fm yazi-cli
+}
+install_yazi
+
+# xwayland-satellite is NOT published on crates.io — a bare `cargo install
+# xwayland-satellite` fails with "could not find ... in registry". Install it
+# from git instead (needs xcb-cursor at build time → libxcb-cursor-dev, above).
+if ! have xwayland-satellite; then
+	log "cargo install xwayland-satellite (from git)…"
+	cargo install --locked --git https://github.com/Supreeeme/xwayland-satellite.git \
+		xwayland-satellite || warn "xwayland-satellite install failed"
+fi
+
+# ── 3b. niri (built from source) ────────────────────────────────────────────
+# No usable niri apt package exists on noble (24.04) — niri only entered Ubuntu
+# in 24.10. (The original spec pulled it from ppa:avengemedia/danklinux, which
+# actually ships DankMaterialShell's `dgop`, not niri, so niri never installed.)
+# Build the pinned release from source — every C dep is in APT_PKGS above — and
+# install the binary + SDDM session + portal config + user units by hand. niri
+# then appears as a selectable "Niri" session at the SDDM screen (KDE stays).
+build_niri() {
+	have niri && { log "niri already installed."; return; }
+	have cargo || { warn "cargo missing — cannot build niri"; return; }
+	local d; d="$(mktemp -d)"
+	log "building niri ${NIRI_TAG} from source (a few minutes)…"
+	if git clone --depth 1 --branch "$NIRI_TAG" https://github.com/YaLTeR/niri.git "$d/niri" \
+		&& cargo build --release --locked --manifest-path "$d/niri/Cargo.toml"; then
+		local n="$d/niri"
+		sudo install -Dm755 "$n/target/release/niri"            /usr/local/bin/niri
+		sudo install -Dm755 "$n/resources/niri-session"         /usr/local/bin/niri-session
+		sudo install -Dm644 "$n/resources/niri.desktop"         /usr/share/wayland-sessions/niri.desktop
+		sudo install -Dm644 "$n/resources/niri-portals.conf"    /usr/share/xdg-desktop-portal/niri-portals.conf
+		sudo install -Dm644 "$n/resources/niri.service"         /usr/lib/systemd/user/niri.service
+		sudo install -Dm644 "$n/resources/niri-shutdown.target" /usr/lib/systemd/user/niri-shutdown.target
+		log "niri ${NIRI_TAG} installed (pick 'Niri' at the SDDM login screen)."
+	else
+		warn "niri build failed — see output above."
+	fi
+	rm -rf "$d"
+}
+build_niri
 
 # ── 4. starship prompt ──────────────────────────────────────────────────────
 if ! have starship; then
@@ -160,6 +219,13 @@ if [[ ! -x "$HOME/.local/bin/zen" ]]; then
 	curl -fsSL https://github.com/zen-browser/updates-server/raw/refs/heads/main/install.sh | bash \
 		|| warn "Zen install failed"
 fi
+# The niri config spawns `zen-browser`, but the per-user tarball installs the
+# binary as `zen`. Alias it so the startup spawn resolves the same as on Arch
+# (where the package binary is `zen-browser`).
+if [[ -x "$HOME/.local/bin/zen" && ! -e "$HOME/.local/bin/zen-browser" ]]; then
+	ln -sfn zen "$HOME/.local/bin/zen-browser"
+	log "linked zen-browser → zen"
+fi
 
 # ── 9. uv / nvm / bun (per-user runtime managers; cross-distro) ─────────────
 have uv  || { log "installing uv…";  curl -LsSf https://astral.sh/uv/install.sh | sh || warn "uv failed"; }
@@ -186,7 +252,8 @@ install_noctalia() {
 	if git clone --depth 1 "${branch_arg[@]}" \
 		https://github.com/noctalia-dev/noctalia-qs "$d/noctalia-qs"; then
 		( cd "$d/noctalia-qs" \
-			&& cmake -GNinja -B build -DCMAKE_BUILD_TYPE=Release \
+			&& cmake -GNinja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+				-DCMAKE_INSTALL_PREFIX=/usr/local -DDISTRIBUTOR="meetinjp/.dotfiles" \
 			&& cmake --build build \
 			&& sudo cmake --install build ) || warn "noctalia-qs build failed"
 	else

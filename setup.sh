@@ -309,31 +309,35 @@ PLIST
 		/usr/bin/hidutil property --set "$CAPS_MAP" >/dev/null 2>&1 || true
 		echo "  installed Caps→Cmd LaunchAgent + applied for this session."
 	fi
-elif command -v keyd &>/dev/null; then
+elif command -v keyd &>/dev/null || command -v keyd.rvaiya &>/dev/null; then
+	# NOTE: the keyd-team Ubuntu PPA ships the binary as `keyd.rvaiya` (not
+	# `keyd`) to dodge a name clash — while the systemd unit stays `keyd`. A
+	# bare `command -v keyd` gate is exactly what silently skipped this whole
+	# step on Tuxedo OS, leaving Caps Lock unmapped. So detect either name and
+	# always reload through the (stable) service rather than the binary.
 	KEYD_CONFIG=/etc/keyd/default.conf
-	if [[ -f "$KEYD_CONFIG" ]]; then
-		if grep -Eq '^[[:space:]]*capslock[[:space:]]*=[[:space:]]*leftcontrol' "$KEYD_CONFIG"; then
-			echo "  remap already applied."
-		else
-			echo "  $KEYD_CONFIG exists with other rules — leaving alone."
-			echo "  add 'capslock = leftcontrol' under [main] manually."
-		fi
-	else
-		if confirm "Install keyd config? (needs sudo) [Y/n]"; then
-			sudo install -d -m 755 /etc/keyd
-			sudo tee "$KEYD_CONFIG" >/dev/null <<'CONF'
+	if [[ -f "$KEYD_CONFIG" ]] && grep -Eq '^[[:space:]]*capslock[[:space:]]*=[[:space:]]*leftcontrol' "$KEYD_CONFIG"; then
+		echo "  remap already applied."
+		sudo systemctl enable --now keyd 2>/dev/null || true
+	elif [[ -f "$KEYD_CONFIG" ]]; then
+		echo "  $KEYD_CONFIG exists with other rules — leaving alone."
+		echo "  add 'capslock = leftcontrol' under [main] manually."
+	elif confirm "Install keyd config? (needs sudo) [Y/n]"; then
+		sudo install -d -m 755 /etc/keyd
+		sudo tee "$KEYD_CONFIG" >/dev/null <<'CONF'
 [ids]
 *
 
 [main]
 capslock = leftcontrol
 CONF
-			sudo systemctl enable --now keyd
-			echo "  remap applied + keyd enabled."
-		fi
+		sudo systemctl enable --now keyd
+		sudo systemctl restart keyd   # re-read the config if keyd was already running
+		echo "  remap applied + keyd (re)started."
 	fi
 else
-	echo "  keyd not installed — skipping (install with: sudo pacman -S keyd)."
+	echo "  keyd not installed — skipping."
+	echo "  (Arch: sudo pacman -S keyd | Tuxedo OS: debian/provision.sh adds ppa:keyd-team/ppa)"
 fi
 
 # ---------------------------------------------------------------------------

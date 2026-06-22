@@ -18,6 +18,18 @@ for _brew in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbr
 done
 unset _brew
 
+# Put user bin dirs on PATH for LOGIN shells, not just interactive (.zshrc) ones.
+# The niri session is launched by a login, non-interactive shell (niri-session →
+# `exec -l "$SHELL"` / `exec niri --session`), which sources THIS file but never
+# .zshrc — so without this, GUI apps niri spawns that live under ~/.local/bin
+# (e.g. `zen-browser`) or ~/.cargo/bin are not found and silently fail to start.
+# Idempotent; rustup's ~/.zshenv already adds ~/.cargo/bin, we just guarantee it.
+for _d in "$HOME/.local/bin" "$HOME/.cargo/bin"; do
+    case ":$PATH:" in *":$_d:"*) ;; *) [[ -d "$_d" ]] && PATH="$_d:$PATH" ;; esac
+done
+unset _d
+export PATH
+
 # tty1 → niri handoff is Linux/Wayland only. macOS has no VT named /dev/tty1
 # and no niri, so the tty test already fails there — the $OSTYPE guard makes
 # that explicit and prevents an accidental `exec niri` on Darwin.

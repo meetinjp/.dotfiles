@@ -83,24 +83,29 @@ git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
 ~/.dotfiles/setup.sh      # identity/GPG/locale/etc; skips the TUXEDO-hw + tty1 bits
 ```
 
-`debian/provision.sh` installs: **niri** (`ppa:avengemedia/danklinux` — ships the
-SDDM session file), **Ghostty** (`ppa:mkasberg/ghostty-ubuntu`), **keyd**
-(`ppa:keyd-team/ppa`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh +
-plugins, kanshi, wlsunset, grim/slurp, portals, …), and the non-apt pieces via
-official scripts / cargo / tarball (**starship, yazi, xwayland-satellite,
-FiraCode Nerd Font, Zen, Go, Rust, Docker, uv/nvm/bun**).
+`debian/provision.sh` installs: **niri** (built from source at the pinned
+`NIRI_TAG` — noble has no niri package, so the binary + SDDM session file +
+portal config + user units are installed by hand), **Ghostty**
+(`ppa:mkasberg/ghostty-ubuntu`), **keyd** (`ppa:keyd-team/ppa` — note the binary
+is `keyd.rvaiya`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh + plugins,
+kanshi, wlsunset, grim/slurp, portals, plus the Qt6 + polkit + libdrm build deps
+Noctalia needs, …), and the non-apt pieces via official scripts / cargo / tarball
+(**starship, yazi, xwayland-satellite (from git, not crates.io), FiraCode Nerd
+Font, Zen, Go, Rust, Docker, uv/nvm/bun**). The bar/launcher **Noctalia** is built
+from source (`noctalia-qs`, a Quickshell fork → the `qs` binary) and its shell
+config is fetched into `~/.config/quickshell/noctalia-shell`.
 
 `setup.sh` **skips** the manual TUXEDO hardware step and the no-display-manager
 tty1→niri model. **At the SDDM login screen, pick the "Niri" session** — KDE
 Plasma stays available as the fallback.
 
-> ⚠️ **Not yet validated on real Tuxedo OS hardware** (authored from a verified
-> research spec). Expect to live-tweak two things: the niri PPA resolving
-> cleanly, and **Noctalia** (the bar/launcher) — it builds from source and needs
-> **Qt ≥ 6.6** (Tuxedo OS backports it; stock Ubuntu 24.04 has 6.4, where the
-> build self-skips with a warning and you get bare niri until then). Version pins
-> (`GO_VER`, `NVM_TAG`, Noctalia tag) live at the top of `debian/provision.sh` —
-> bump them to current before running.
+> **Validated on real Tuxedo OS hardware** (24.04.4, migrated KDE→niri): niri
+> builds and runs as an SDDM session, Caps→Ctrl (keyd), the zsh login shell, and
+> the stowed configs all work. **Noctalia** (the bar/launcher) builds from source
+> and needs **Qt ≥ 6.6** — Tuxedo OS backports Qt 6.9 so it builds; on stock
+> Ubuntu 24.04 (Qt 6.4) the build self-skips with a warning and you get bare niri
+> until then. Version pins (`NIRI_TAG`, `GO_VER`, `NVM_TAG`, Noctalia tag) live at
+> the top of `debian/provision.sh` — bump them to current before running.
 
 ## Install — CachyOS (Arch, legacy — slated for removal)
 
@@ -587,8 +592,10 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
   greeting. Fix: `chsh -s "$(command -v zsh)"` and reboot — `setup.sh` step 8
   does this for you.
 - **Caps Lock isn't Ctrl**: `systemctl is-enabled keyd` should say `enabled`
-  and `/etc/keyd/default.conf` should contain `capslock = leftcontrol`. If
-  not, rerun `setup.sh` (step 6), then `sudo systemctl enable --now keyd`.
+  and `/etc/keyd/default.conf` should contain `capslock = leftcontrol`. If not,
+  rerun `setup.sh` (step 6), then `sudo systemctl restart keyd`. Note: on Tuxedo
+  OS the keyd-team PPA names the binary `keyd.rvaiya` (the service stays `keyd`),
+  so reload via `systemctl` — a bare `keyd reload` will say "command not found".
 - **Keyboard backlight keys do nothing / `white:kbd_backlight` missing**:
   `tuxedo-drivers-dkms` isn't loaded. Confirm it's installed
   (`pacman -Qq tuxedo-drivers-dkms`) and **reboot** so the platform modules
