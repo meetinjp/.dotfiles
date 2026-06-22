@@ -226,6 +226,19 @@ if [[ -x "$HOME/.local/bin/zen" && ! -e "$HOME/.local/bin/zen-browser" ]]; then
 	ln -sfn zen "$HOME/.local/bin/zen-browser"
 	log "linked zen-browser → zen"
 fi
+# The Zen tarball writes a launcher with a literal `Exec=$HOME/...` (the desktop
+# spec does NOT expand $HOME, so launchers like Noctalia can't run it) and no
+# StartupWMClass — so every Zen window spawns a throwaway userapp-Zen-*.desktop,
+# and you end up with several dead "Zen Browser" entries. Patch Exec to an
+# absolute path + %u, add StartupWMClass=zen, and clear the auto-gen dupes.
+ZEN_DESKTOP="$HOME/.local/share/applications/zen.desktop"
+if [[ -f "$ZEN_DESKTOP" ]]; then
+	sed -i -e 's#^Exec=\$HOME/#Exec='"$HOME"'/#' -e 's#^Exec=\(.*/zen\)$#Exec=\1 %u#' "$ZEN_DESKTOP"
+	grep -q '^StartupWMClass=' "$ZEN_DESKTOP" || printf 'StartupWMClass=zen\n' >> "$ZEN_DESKTOP"
+	rm -f "$HOME"/.local/share/applications/userapp-Zen-*.desktop
+	have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
+	log "patched zen.desktop (Exec + StartupWMClass)"
+fi
 
 # ── 9. uv / nvm / bun (per-user runtime managers; cross-distro) ─────────────
 have uv  || { log "installing uv…";  curl -LsSf https://astral.sh/uv/install.sh | sh || warn "uv failed"; }
