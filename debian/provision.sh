@@ -299,9 +299,18 @@ ZEN_DESKTOP="$HOME/.local/share/applications/zen.desktop"
 if [[ -f "$ZEN_DESKTOP" ]]; then
 	sed -i -e 's#^Exec=\$HOME/#Exec='"$HOME"'/#' -e 's#^Exec=\(.*/zen\)$#Exec=\1 %u#' "$ZEN_DESKTOP"
 	grep -q '^StartupWMClass=' "$ZEN_DESKTOP" || printf 'StartupWMClass=zen\n' >> "$ZEN_DESKTOP"
+	# Register Zen as an http/https handler (the tarball's .desktop omits MimeType,
+	# so it never counts as a browser for xdg).
+	grep -q '^MimeType=' "$ZEN_DESKTOP" || printf 'MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;\n' >> "$ZEN_DESKTOP"
 	rm -f "$HOME"/.local/share/applications/userapp-Zen-*.desktop
 	have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
-	log "patched zen.desktop (Exec + StartupWMClass)"
+	# Make Zen the actual default browser. xdg-settings sets the desktop default,
+	# but the per-scheme handlers (http/https/text-html) are independent and on
+	# Tuxedo OS stay pointed at Firefox unless set explicitly — which is why nvim's
+	# `gx` / xdg-open kept opening Firefox. Set both.
+	have xdg-settings && xdg-settings set default-web-browser zen.desktop 2>/dev/null || true
+	have xdg-mime && xdg-mime default zen.desktop x-scheme-handler/http x-scheme-handler/https text/html 2>/dev/null || true
+	log "patched zen.desktop + set Zen as default browser"
 fi
 
 # ── 9. uv / nvm / bun (per-user runtime managers; cross-distro) ─────────────
