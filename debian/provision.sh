@@ -163,6 +163,31 @@ install_nvim() {
 }
 install_nvim
 
+# tree-sitter CLI — nvim-treesitter's `main` branch shells out to `tree-sitter`
+# to compile parsers; without it nvim throws `ENOENT (cmd): 'tree-sitter'`. Not
+# usefully packaged in apt — install the prebuilt single binary from upstream.
+install_treesitter() {
+	have tree-sitter && { log "tree-sitter CLI already installed."; return; }
+	local ts
+	case "$ARCH_DEB" in
+		amd64) ts=tree-sitter-linux-x64.gz ;;
+		arm64) ts=tree-sitter-linux-arm64.gz ;;
+		*) warn "tree-sitter: no prebuilt for $ARCH_DEB — trying cargo"; have cargo && cargo install --locked tree-sitter-cli; return ;;
+	esac
+	local d; d="$(mktemp -d)"
+	if curl -fsSL "https://github.com/tree-sitter/tree-sitter/releases/latest/download/${ts}" -o "$d/ts.gz" \
+		&& gunzip -c "$d/ts.gz" > "$d/tree-sitter" && chmod +x "$d/tree-sitter" \
+		&& "$d/tree-sitter" --version >/dev/null 2>&1; then
+		mkdir -p "$HOME/.local/bin"; mv "$d/tree-sitter" "$HOME/.local/bin/tree-sitter"
+		log "installed tree-sitter CLI $("$HOME/.local/bin/tree-sitter" --version)"
+	else
+		warn "tree-sitter prebuilt failed — trying cargo"
+		have cargo && cargo install --locked tree-sitter-cli || warn "tree-sitter CLI not installed"
+	fi
+	rm -rf "$d"
+}
+install_treesitter
+
 # xwayland-satellite is NOT published on crates.io — a bare `cargo install
 # xwayland-satellite` fails with "could not find ... in registry". Install it
 # from git instead (needs xcb-cursor at build time → libxcb-cursor-dev, above).
