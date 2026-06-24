@@ -58,7 +58,7 @@ APT_PKGS=(
 	xdg-desktop-portal-gnome xdg-desktop-portal-gtk xdg-utils gnome-keyring
 	libnotify-bin power-profiles-daemon fwupd udisks2
 	zsh zsh-autosuggestions zsh-syntax-highlighting tmux ripgrep eza fd-find fzf
-	neovim gnupg pinentry-curses gh python3
+	gnupg pinentry-curses gh python3
 	fonts-firacode fonts-noto-core fonts-noto-color-emoji fonts-noto-cjk locales
 	software-properties-common
 )
@@ -123,6 +123,32 @@ install_yazi() {
 	cargo_install yazi yazi-fm yazi-cli
 }
 install_yazi
+
+# Neovim: noble's apt nvim is ancient (0.9). Install the latest stable from the
+# official release tarball into ~/.local (no sudo) — ~/.local/bin precedes
+# /usr/bin on PATH so it shadows any apt nvim. amd64/arm64 only; else apt.
+install_nvim() {
+	have nvim && [[ -x "$HOME/.local/opt/nvim/bin/nvim" ]] && { log "nvim (latest) already installed."; return; }
+	local arch
+	case "$ARCH_DEB" in
+		amd64) arch=x86_64 ;;
+		arm64) arch=arm64 ;;
+		*) warn "nvim: no official tarball for $ARCH_DEB — installing apt neovim"; sudo apt-get install -y neovim; return ;;
+	esac
+	local d; d="$(mktemp -d)"
+	if curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${arch}.tar.gz" -o "$d/nvim.tar.gz" \
+		&& tar -xzf "$d/nvim.tar.gz" -C "$d"; then
+		local ex; ex="$(find "$d" -maxdepth 1 -type d -name 'nvim-linux*' | head -1)"
+		mkdir -p "$HOME/.local/opt" "$HOME/.local/bin"
+		rm -rf "$HOME/.local/opt/nvim"; mv "$ex" "$HOME/.local/opt/nvim"
+		ln -sfn "$HOME/.local/opt/nvim/bin/nvim" "$HOME/.local/bin/nvim"
+		log "installed neovim $("$HOME/.local/opt/nvim/bin/nvim" --version | head -1)"
+	else
+		warn "nvim tarball install failed — falling back to apt neovim"; sudo apt-get install -y neovim
+	fi
+	rm -rf "$d"
+}
+install_nvim
 
 # xwayland-satellite is NOT published on crates.io — a bare `cargo install
 # xwayland-satellite` fails with "could not find ... in registry". Install it

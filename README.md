@@ -91,7 +91,7 @@ is `keyd.rvaiya`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh + plugins
 kanshi, wlsunset, grim/slurp, portals, plus the Qt6 + polkit + libdrm build deps
 Noctalia needs, …), and the non-apt pieces via official scripts / cargo / tarball
 (**starship, yazi, xwayland-satellite (from git, not crates.io), FiraCode Nerd
-Font, Zen, Go, Rust, Docker, uv/nvm/bun**). The bar/launcher **Noctalia** is built
+Font, Zen, Go, Rust, Docker, uv/nvm/bun, Neovim (latest — apt's is too old)**). The bar/launcher **Noctalia** is built
 from source (`noctalia-qs`, a Quickshell fork → the `qs` binary) and its shell
 config is fetched into `~/.config/quickshell/noctalia-shell`.
 
