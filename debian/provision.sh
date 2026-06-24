@@ -58,7 +58,7 @@ APT_PKGS=(
 	xdg-desktop-portal-gnome xdg-desktop-portal-gtk xdg-utils gnome-keyring
 	libnotify-bin power-profiles-daemon fwupd udisks2
 	zsh zsh-autosuggestions zsh-syntax-highlighting tmux ripgrep eza fd-find fzf
-	gnupg pinentry-curses gh python3
+	gnupg pinentry-curses gh python3 python3-venv python3-pip
 	fonts-firacode fonts-noto-core fonts-noto-color-emoji fonts-noto-cjk locales
 	software-properties-common
 )
