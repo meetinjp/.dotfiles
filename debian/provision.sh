@@ -129,22 +129,35 @@ install_yazi
 # /usr/bin on PATH so it shadows any apt nvim. amd64/arm64 only; else apt.
 install_nvim() {
 	have nvim && [[ -x "$HOME/.local/opt/nvim/bin/nvim" ]] && { log "nvim (latest) already installed."; return; }
-	local arch
+	# Candidate asset names: handles the historical nvim-linux64 → nvim-linux-x86_64
+	# rename so this keeps resolving whichever name upstream publishes.
+	local assets=()
 	case "$ARCH_DEB" in
-		amd64) arch=x86_64 ;;
-		arm64) arch=arm64 ;;
+		amd64) assets=(nvim-linux-x86_64.tar.gz nvim-linux64.tar.gz) ;;
+		arm64) assets=(nvim-linux-arm64.tar.gz) ;;
 		*) warn "nvim: no official tarball for $ARCH_DEB — installing apt neovim"; sudo apt-get install -y neovim; return ;;
 	esac
-	local d; d="$(mktemp -d)"
-	if curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${arch}.tar.gz" -o "$d/nvim.tar.gz" \
-		&& tar -xzf "$d/nvim.tar.gz" -C "$d"; then
+	local d ok="" a; d="$(mktemp -d)"
+	for a in "${assets[@]}"; do
+		if curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/$a" -o "$d/nvim.tar.gz" 2>/dev/null \
+			&& tar -xzf "$d/nvim.tar.gz" -C "$d" 2>/dev/null; then ok=1; break; fi
+	done
+	if [[ -n "$ok" ]]; then
 		local ex; ex="$(find "$d" -maxdepth 1 -type d -name 'nvim-linux*' | head -1)"
 		mkdir -p "$HOME/.local/opt" "$HOME/.local/bin"
 		rm -rf "$HOME/.local/opt/nvim"; mv "$ex" "$HOME/.local/opt/nvim"
 		ln -sfn "$HOME/.local/opt/nvim/bin/nvim" "$HOME/.local/bin/nvim"
-		log "installed neovim $("$HOME/.local/opt/nvim/bin/nvim" --version | head -1)"
+		# The prebuilt binary needs a fairly modern glibc; on an older base it
+		# extracts fine but won't exec. Verify it actually RUNS — if not, drop the
+		# tarball and fall back to apt so we never leave a broken nvim behind.
+		if "$HOME/.local/opt/nvim/bin/nvim" --version >/dev/null 2>&1; then
+			log "installed neovim $("$HOME/.local/opt/nvim/bin/nvim" --version | head -1)"
+		else
+			warn "prebuilt nvim won't run here (glibc too old?) — reverting to apt neovim"
+			rm -rf "$HOME/.local/opt/nvim" "$HOME/.local/bin/nvim"; sudo apt-get install -y neovim
+		fi
 	else
-		warn "nvim tarball install failed — falling back to apt neovim"; sudo apt-get install -y neovim
+		warn "nvim tarball download failed — falling back to apt neovim"; sudo apt-get install -y neovim
 	fi
 	rm -rf "$d"
 }
