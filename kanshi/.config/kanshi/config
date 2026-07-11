@@ -11,10 +11,10 @@ profile laptop {
     output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75
 }
 
-# Laptop + 1 external. Laptop sits on the left, external on the right.
-# eDP-1 logical width at scale 1.75 = 2880/1.75 ≈ 1645, so external starts at x=1645.
+# Laptop + 1 external. External on top, laptop underneath.
+# External logical height at scale 1 = 1080, so laptop starts at y=1080.
 profile docked {
-    output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75
     # Replace HDMI-A-1 with whatever `niri msg outputs` reports.
-    output HDMI-A-1 mode 1920x1080 position 1645,0 scale 1
+    output HDMI-A-1 mode 1920x1080 position 0,0 scale 1
+    output eDP-1 mode 2880x1800@120 position 0,1080 scale 1.75
 }

@@ -10,12 +10,12 @@ export KEYTIMEOUT=1
 # Vi-mode QoL — zsh's default vi-backward-delete-char only deletes within
 # the current insert session, so backspace stops working after Esc → i.
 # Rebind insert-mode editing keys to the emacs-style widgets that always work.
-bindkey -M viins '^?' backward-delete-char    # backspace
-bindkey -M viins '^H' backward-delete-char    # ctrl+h
-bindkey -M viins '^W' backward-kill-word      # ctrl+w
-bindkey -M viins '^U' backward-kill-line      # ctrl+u
-bindkey -M viins '^A' beginning-of-line       # ctrl+a
-bindkey -M viins '^E' end-of-line             # ctrl+e
+bindkey -M viins '^?' backward-delete-char # backspace
+bindkey -M viins '^H' backward-delete-char # ctrl+h
+bindkey -M viins '^W' backward-kill-word   # ctrl+w
+bindkey -M viins '^U' backward-kill-line   # ctrl+u
+bindkey -M viins '^A' beginning-of-line    # ctrl+a
+bindkey -M viins '^E' end-of-line          # ctrl+e
 
 # History
 HISTFILE="$HOME/.zsh_history"
@@ -35,16 +35,15 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 # all autosuggestions candidates precede all syntax-highlighting candidates,
 # because zsh-syntax-highlighting must be sourced last per upstream docs.
 for _plugin in \
-    /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh \
-    /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
-    "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
-    /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
-    /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
-    /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
-    "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
-    /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-do
-    [[ -r "$_plugin" ]] && source "$_plugin"
+	/usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh \
+	/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+	"${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+	/usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+	/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+	/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+	"${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
+	/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh; do
+	[[ -r "$_plugin" ]] && source "$_plugin"
 done
 unset _plugin
 
@@ -68,14 +67,14 @@ export GIT_EDITOR="nvim"
 # bare `ls` must not turn into "command not found: eza".
 alias v="nvim ."
 if command -v eza >/dev/null; then
-    alias ls="eza"
-    alias ll="eza -la"
-    alias la="eza -a"
-    alias lt="eza --tree --level=2"
+	alias ls="eza"
+	alias ll="eza -la"
+	alias la="eza -a"
+	alias lt="eza --tree --level=2"
 else
-    alias ll="ls -la"
-    alias la="ls -a"
-    alias lt="ls -R"   # no tree view without eza; -R is the closest builtin
+	alias ll="ls -la"
+	alias la="ls -a"
+	alias lt="ls -R" # no tree view without eza; -R is the closest builtin
 fi
 
 # PATH
@@ -103,13 +102,13 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # (~/.local/share/pnpm on Linux, ~/Library/pnpm on macOS). The global bin shims
 # live under $PNPM_HOME/bin (confirmed via `pnpm bin -g`), so PATH needs /bin.
 if [[ "$OSTYPE" == darwin* ]]; then
-    export PNPM_HOME="$HOME/Library/pnpm"
+	export PNPM_HOME="$HOME/Library/pnpm"
 else
-    export PNPM_HOME="$HOME/.local/share/pnpm"
+	export PNPM_HOME="$HOME/.local/share/pnpm"
 fi
 case ":$PATH:" in
-    *":$PNPM_HOME/bin:"*) ;;
-    *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+*":$PNPM_HOME/bin:"*) ;;
+*) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 
 # rbenv — Ruby version manager (used to match a project's .ruby-version, e.g.
@@ -117,6 +116,14 @@ esac
 # stays clean on hosts without rbenv. `rbenv init` puts the shims dir on PATH
 # and enables per-directory auto-switching.
 command -v rbenv >/dev/null && eval "$(rbenv init - zsh)"
+
+# pyenv — Python version manager (the rbenv/nvm analog for Python; per-project
+# versions via .python-version, alongside uv for pip/venv). Installer puts it
+# at ~/.pyenv; PATH must be set before `pyenv init` since init relies on the
+# shims dir already being resolvable.
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+command -v pyenv >/dev/null && eval "$(pyenv init - zsh)"
 
 # Claude Code binary — only export if installed.
 _claude_bin="$(command -v claude)"
@@ -128,9 +135,94 @@ unset _claude_bin
 # keygrip is registered in ~/.gnupg/sshcontrol.
 export GPG_TTY="$(tty)"
 if command -v gpgconf >/dev/null; then
-    export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
-    gpgconf --launch gpg-agent 2>/dev/null || true
+	export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
+	gpgconf --launch gpg-agent 2>/dev/null || true
 fi
 
 # Per-host overrides (gitignored).
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+# --- helper functions OMZ aliases depend on ---
+function git_current_branch() { git branch --show-current 2>/dev/null; }
+function git_main_branch() {
+	command git rev-parse --git-dir &>/dev/null || return
+	local ref
+	for ref in refs/{heads,remotes/{origin,upstream}}/{main,trunk,mainline,default,stable,master}; do
+		command git show-ref -q --verify $ref && {
+			echo ${ref:t}
+			return 0
+		}
+	done
+	echo master
+	return 1
+}
+
+# --- git aliases (matching the OMZ git plugin) ---
+alias g='git'
+
+# status / info
+alias gst='git status'
+alias gss='git status --short'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias glg='git log --stat'
+alias glo='git log --oneline --decorate'
+alias glog='git log --oneline --decorate --graph'
+alias gloga='git log --oneline --decorate --graph --all'
+
+# add / commit
+alias ga='git add'
+alias gaa='git add --all'
+alias gapa='git add --patch'
+alias gc='git commit --verbose'
+alias gcmsg='git commit --message' # <- this is "commit -m", NOT gcm
+alias 'gc!'='git commit --verbose --amend'
+alias 'gcn!'='git commit --verbose --no-edit --amend'
+
+# branch
+alias gb='git branch'
+alias gba='git branch --all'
+alias gbd='git branch --delete'
+alias gbD='git branch --delete --force'
+
+# checkout / switch
+alias gco='git checkout'
+alias gcb='git checkout -b'
+alias gcm='git checkout $(git_main_branch)' # <- checkout main, NOT commit
+alias gsw='git switch'
+alias gswc='git switch --create'
+
+# fetch / pull / push
+alias gf='git fetch'
+alias gfa='git fetch --all --tags --prune --jobs=10'
+alias gl='git pull'
+alias gpr='git pull --rebase'
+alias ggp='git push'
+alias 'gpf!'='git push --force'
+alias gpf='git push --force-with-lease --force-if-includes'
+alias gpsup='git push --set-upstream origin $(git_current_branch)'
+alias gpu='git push upstream'
+
+# merge / rebase
+alias gm='git merge'
+alias grb='git rebase'
+alias grbi='git rebase --interactive'
+alias grbc='git rebase --continue'
+alias grba='git rebase --abort'
+
+# stash
+alias gsta='git stash push'
+alias gstp='git stash pop'
+alias gstl='git stash list'
+alias gstd='git stash drop'
+
+# reset / restore
+alias grh='git reset'
+alias grhh='git reset --hard'
+alias grs='git restore'
+alias grst='git restore --staged' # <- staged is grst
+alias grss='git restore --source' # <- grss is --source in OMZ
+
+# remote
+alias gr='git remote'
+alias grv='git remote --verbose'

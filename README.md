@@ -12,7 +12,8 @@ bar + launcher + notifications + lock + polkit + wallpaper), terminal
 
 - [**TUXEDO OS**](https://www.tuxedocomputers.com/en/TUXEDO-OS_1.tuxedo) (Ubuntu
   24.04 base, `apt`) — the path going forward: hardware is supported natively
-  and niri runs as a session next to the stock **KDE Plasma** (kept as fallback).
+  and niri runs as a session next to the stock **KDE Plasma** (kept as
+  fallback).
 - [**CachyOS**](https://cachyos.org/) (Arch, `pacman`, no display manager —
   getty@tty1 → `niri --session`) — the original/legacy path, **slated for
   removal**.
@@ -22,50 +23,50 @@ bar + launcher + notifications + lock + polkit + wallpaper), terminal
 > **On macOS?** The CLI/dev half of this repo is cross-platform; the Linux
 > desktop is not. Skip the CachyOS/pacman sections below and jump to
 > **[macOS (Xcode box)](#macos-xcode-box)** — `install.sh` runs `brew bundle`
-> and stows everything in one shot, and that section has a full **React Native
-> / iOS** build walkthrough (Xcode 26, rbenv Ruby, CocoaPods, iPad).
+> and stows everything in one shot, and that section has a full **React Native /
+> iOS** build walkthrough (Xcode 26, rbenv Ruby, CocoaPods, iPad).
 
-Single AMD APU (Ryzen AI 9 HX 370 / Radeon 890M iGPU) — no discrete GPU, so
-niri auto-selects the only DRM device and there is no `prime-run` indirection.
-TUXEDO ships its own firmware + Tuxedo OS; on CachyOS the hardware parity
-(keyboard backlight, fan control, battery charge limit) comes from
-`tuxedo-drivers` + `tuxedo-rs` (`tailord`/`tailor-gui`), plus
-`tuxedo-yt6801-dkms-git` for wired 2.5G Ethernet on the LTS kernel — see the
+Single AMD APU (Ryzen AI 9 HX 370 / Radeon 890M iGPU) — no discrete GPU, so niri
+auto-selects the only DRM device and there is no `prime-run` indirection. TUXEDO
+ships its own firmware + Tuxedo OS; on CachyOS the hardware parity (keyboard
+backlight, fan control, battery charge limit) comes from `tuxedo-drivers` +
+`tuxedo-rs` (`tailord`/`tailor-gui`), plus `tuxedo-yt6801-dkms-git` for wired
+2.5G Ethernet on the LTS kernel — see the
 **[TUXEDO hardware](#tuxedo-hardware)** section below. Machine-specific bits
 (panel output name, scale) are flagged in the config files for per-host
 adjustment.
 
 Touchpad uses libinput `button-areas` click-method (bottom-right press = R
-click, Windows/PC style) plus tap-to-click on top (2-finger tap also R).
-Default browser is Zen (`zen-browser`), set both via xdg-mime and the
-`$BROWSER` env var (for CLI tools like `gh` and `man`).
+click, Windows/PC style) plus tap-to-click on top (2-finger tap also R). Default
+browser is Zen (`zen-browser`), set both via xdg-mime and the `$BROWSER` env var
+(for CLI tools like `gh` and `man`).
 
 ## Layout
 
-| Dir         | Purpose                                                      | How it lands           |
-| ----------- | ------------------------------------------------------------ | ---------------------- |
-| `bin/`      | `~/.local/bin/` scripts (`niri-screenshot`)                  | stowed                 |
-| `claude/`   | Claude Code config patcher + plugin installer                | run by `install.sh`    |
-| `debian/`   | TUXEDO OS (Ubuntu) provisioning — apt + PPAs + scripts/cargo  | run by `install.sh`    |
-| `ghostty/`  | GPU-accelerated terminal (Gruvbox Dark Hard, zsh integration)| stowed                 |
-| `git/`      | gitconfig templates (identity injected at setup time)        | rendered by `setup.sh` |
-| `kanshi/`   | auto-switch monitor profiles (laptop / docked)               | stowed                 |
-| `niri/`     | Wayland compositor — scrollable tiling                       | stowed                 |
-| `noctalia/` | Noctalia colorscheme patcher (pins Gruvbox)                  | run by `install.sh`    |
-| `nvim/`     | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim) | stowed                |
-| `prettier/` | global prettier config                                       | stowed                 |
-| `ripgrep/`  | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)        | stowed                 |
-| `starship/` | cross-shell prompt config                                    | stowed                 |
-| `sudoers.d/`| sudo `pwfeedback` (show `*` while typing the password)       | installed by `setup.sh` |
-| `systemd/`  | `niri-session-anchor` user unit (holds graphical-session.target) | stowed (Linux)     |
-| `tailord/`  | tuxedo-rs fan presets (quiet/balanced/performance)          | installed by `setup.sh` |
-| `tmux/`     | `C-a` prefix, mouse on, vim nav, Gruvbox status              | stowed                 |
-| `udev/`     | keyboard-backlight-off-at-boot rule                         | installed by `setup.sh` |
-| `zsh/`      | bare zshrc + `.zprofile` (tty1 → niri handoff)               | stowed                 |
+| Dir          | Purpose                                                          | How it lands            |
+| ------------ | ---------------------------------------------------------------- | ----------------------- |
+| `bin/`       | `~/.local/bin/` scripts (`niri-screenshot`)                      | stowed                  |
+| `claude/`    | Claude Code config patcher + plugin installer                    | run by `install.sh`     |
+| `debian/`    | TUXEDO OS (Ubuntu) provisioning — apt + PPAs + scripts/cargo     | run by `install.sh`     |
+| `ghostty/`   | GPU-accelerated terminal (Gruvbox Dark Hard, zsh integration)    | stowed                  |
+| `git/`       | gitconfig templates (identity injected at setup time)            | rendered by `setup.sh`  |
+| `kanshi/`    | auto-switch monitor profiles (laptop / docked)                   | stowed                  |
+| `niri/`      | Wayland compositor — scrollable tiling                           | stowed                  |
+| `noctalia/`  | Noctalia colorscheme patcher (pins Gruvbox)                      | run by `install.sh`     |
+| `nvim/`      | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)    | stowed                  |
+| `prettier/`  | global prettier config                                           | stowed                  |
+| `ripgrep/`   | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)            | stowed                  |
+| `starship/`  | cross-shell prompt config                                        | stowed                  |
+| `sudoers.d/` | sudo `pwfeedback` (show `*` while typing the password)           | installed by `setup.sh` |
+| `systemd/`   | `niri-session-anchor` user unit (holds graphical-session.target) | stowed (Linux)          |
+| `tailord/`   | tuxedo-rs fan presets (quiet/balanced/performance)               | installed by `setup.sh` |
+| `tmux/`      | `C-a` prefix, mouse on, vim nav, Gruvbox status                  | stowed                  |
+| `udev/`      | keyboard-backlight-off-at-boot rule                              | installed by `setup.sh` |
+| `zsh/`       | bare zshrc + `.zprofile` (tty1 → niri handoff)                   | stowed                  |
 
-Bar / launcher / notifications / lock / polkit / wallpaper are all
-provided by **Noctalia** (the `cachyos-niri-noctalia` package). Noctalia is
-configured at runtime via its own settings UI and live-mutates
+Bar / launcher / notifications / lock / polkit / wallpaper are all provided by
+**Noctalia** (the `cachyos-niri-noctalia` package). Noctalia is configured at
+runtime via its own settings UI and live-mutates
 `~/.config/noctalia/settings.json`, so it isn't stowed. `install.sh` runs
 `noctalia/apply.sh` to pin the **Gruvbox** colorscheme (a flock'd JSON merge,
 same pattern as `claude/apply.sh`); everything else stays Noctalia's own
@@ -87,13 +88,14 @@ git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
 `NIRI_TAG` — noble has no niri package, so the binary + SDDM session file +
 portal config + user units are installed by hand), **Ghostty**
 (`ppa:mkasberg/ghostty-ubuntu`), **keyd** (`ppa:keyd-team/ppa` — note the binary
-is `keyd.rvaiya`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh + plugins,
-kanshi, wlsunset, grim/slurp, portals, plus the Qt6 + polkit + libdrm build deps
-Noctalia needs, …), and the non-apt pieces via official scripts / cargo / tarball
-(**starship, yazi, xwayland-satellite (from git, not crates.io), FiraCode Nerd
-Font, Zen, Go, Rust, Docker, uv/nvm/bun, Neovim (latest — apt's is too old)**). The bar/launcher **Noctalia** is built
-from source (`noctalia-qs`, a Quickshell fork → the `qs` binary) and its shell
-config is fetched into `~/.config/quickshell/noctalia-shell`.
+is `keyd.rvaiya`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh +
+plugins, kanshi, wlsunset, grim/slurp, portals, plus the Qt6 + polkit + libdrm
+build deps Noctalia needs, …), and the non-apt pieces via official scripts /
+cargo / tarball (**starship, yazi, xwayland-satellite (from git, not crates.io),
+FiraCode Nerd Font, Zen, Go, Rust, Docker, uv/pyenv/nvm/bun, Neovim (latest — apt's is
+too old)**). The bar/launcher **Noctalia** is built from source (`noctalia-qs`,
+a Quickshell fork → the `qs` binary) and its shell config is fetched into
+`~/.config/quickshell/noctalia-shell`.
 
 `setup.sh` **skips** the manual TUXEDO hardware step and the no-display-manager
 tty1→niri model. **At the SDDM login screen, pick the "Niri" session** — KDE
@@ -101,11 +103,12 @@ Plasma stays available as the fallback.
 
 > **Validated on real Tuxedo OS hardware** (24.04.4, migrated KDE→niri): niri
 > builds and runs as an SDDM session, Caps→Ctrl (keyd), the zsh login shell, and
-> the stowed configs all work. **Noctalia** (the bar/launcher) builds from source
-> and needs **Qt ≥ 6.6** — Tuxedo OS backports Qt 6.9 so it builds; on stock
-> Ubuntu 24.04 (Qt 6.4) the build self-skips with a warning and you get bare niri
-> until then. Version pins (`NIRI_TAG`, `GO_VER`, `NVM_TAG`, Noctalia tag) live at
-> the top of `debian/provision.sh` — bump them to current before running.
+> the stowed configs all work. **Noctalia** (the bar/launcher) builds from
+> source and needs **Qt ≥ 6.6** — Tuxedo OS backports Qt 6.9 so it builds; on
+> stock Ubuntu 24.04 (Qt 6.4) the build self-skips with a warning and you get
+> bare niri until then. Version pins (`NIRI_TAG`, `GO_VER`, `NVM_TAG`, Noctalia
+> tag) live at the top of `debian/provision.sh` — bump them to current before
+> running.
 
 ## Install — CachyOS (Arch, legacy — slated for removal)
 
@@ -133,12 +136,14 @@ sudo pacman -S --needed \
     ttf-firacode-nerd noto-fonts noto-fonts-emoji noto-fonts-cjk
 ```
 
-> **Toolchain choices** (deliberately *not* installed from pacman): **Node** comes
-> from `nvm` (per-project versions) + `bun`; system `nodejs`/`npm` are omitted.
-> **Python** uses `uv` (pip + venv replacement); system `python-pip` is omitted.
-> `rustup` is kept mainly as the build dep for `tailor-gui`; `go` backs the nvim
-> `gopls` LSP. `docker`/`docker-compose` are optional dev runtimes (no service is
-> auto-enabled). Both `nvm` and `bun` install via the curl scripts below.
+> **Toolchain choices** (deliberately _not_ installed from pacman): **Node**
+> comes from `nvm` (per-project versions) + `bun`; system `nodejs`/`npm` are
+> omitted. **Python** uses `uv` (pip + venv replacement) + `pyenv` (arbitrary/
+> per-project versions); system `python-pip` is omitted. `rustup` is kept
+> mainly as the build dep for `tailor-gui`; `go` backs the nvim `gopls` LSP.
+> `docker`/`docker-compose` are optional dev runtimes (no service is
+> auto-enabled). `nvm`, `bun`, and `pyenv` all install via the curl scripts
+> below.
 
 AUR (CachyOS ships `paru` by default):
 
@@ -147,34 +152,35 @@ paru -S zen-browser-bin \
     tuxedo-drivers-dkms tailord tailor-gui   # TUXEDO hardware — see below
 ```
 
-The TUXEDO packages are installed automatically by `setup.sh` (step 7) on
-TUXEDO hardware; the line above is the manual equivalent. `cachyos-niri-noctalia`
-is the curated preset that pulls Noctalia (the Quickshell-based niri shell
-handling bar, launcher, notifications, lock, polkit, and wallpaper).
+The TUXEDO packages are installed automatically by `setup.sh` (step 7) on TUXEDO
+hardware; the line above is the manual equivalent. `cachyos-niri-noctalia` is
+the curated preset that pulls Noctalia (the Quickshell-based niri shell handling
+bar, launcher, notifications, lock, polkit, and wallpaper).
 
 > Building `tailor-gui` compiles Rust. CachyOS ships `rustup` **without** a
 > default toolchain, so `rustc` errors and the meson build fails with
 > `Unknown compiler(s): [['rustc']]`. Run `rustup default stable` first
 > (`setup.sh` step 7 does this for you).
 
-Node version manager + Bun (canonical install scripts — they manage their
-own dirs under `~/.nvm` and `~/.bun`):
+Node version manager + Bun (canonical install scripts — they manage their own
+dirs under `~/.nvm` and `~/.bun`):
 
 ```sh
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 curl -fsSL https://bun.sh/install | bash
 ```
 
-Python toolchain (uv — fast pip+venv replacement):
+Python toolchain (uv for pip+venv, pyenv for arbitrary/per-project versions):
 
 ```sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
+curl -fsSL https://pyenv.run | bash
 ```
 
 ### 2. Clone + stow
 
-Fresh machine has no SSH key yet, so clone over HTTPS first. After
-`setup.sh` provisions SSH-over-GPG you can switch the remote to SSH.
+Fresh machine has no SSH key yet, so clone over HTTPS first. After `setup.sh`
+provisions SSH-over-GPG you can switch the remote to SSH.
 
 ```sh
 git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
@@ -199,8 +205,8 @@ GIT_WORK_EMAIL="you@work.example" \
 ~/.dotfiles/setup.sh
 ```
 
-Or run bare and answer prompts. Pass `DOTFILES_YES=1` to auto-accept
-defaults in non-interactive runs.
+Or run bare and answer prompts. Pass `DOTFILES_YES=1` to auto-accept defaults in
+non-interactive runs.
 
 `setup.sh` does, in order:
 
@@ -209,20 +215,21 @@ defaults in non-interactive runs.
 3. Generates `en_US.UTF-8` locale.
 4. Generates an Ed25519 GPG key with sign + auth subkeys.
 5. Configures gpg-agent to serve the auth subkey as an ssh-agent.
-6. Remaps Caps Lock — Ctrl on Linux (`/etc/keyd/default.conf` + keyd), Cmd on macOS (`hidutil` LaunchAgent).
-7. **TUXEDO hardware** (TUXEDO machines only): `paru -S tuxedo-drivers-dkms
-   tailord tailor-gui` (+ optional `tuxedo-yt6801-dkms-git` for LTS-kernel
-   Ethernet), enables `tailord`, and installs a `battery-charge-limit.service`
-   capping the battery at 80% once the charge-limit sysfs is live.
+6. Remaps Caps Lock — Ctrl on Linux (`/etc/keyd/default.conf` + keyd), Cmd on
+   macOS (`hidutil` LaunchAgent).
+7. **TUXEDO hardware** (TUXEDO machines only):
+   `paru -S tuxedo-drivers-dkms tailord tailor-gui` (+ optional
+   `tuxedo-yt6801-dkms-git` for LTS-kernel Ethernet), enables `tailord`, and
+   installs a `battery-charge-limit.service` capping the battery at 80% once the
+   charge-limit sysfs is live.
 8. Sets the login shell to **zsh** (`chsh`), disables any display manager,
    installs a `getty@tty1` autologin drop-in, and silences the CachyOS fish
    fastfetch greeting. zsh's `.zprofile` then execs `niri --session` on tty1
    when no Wayland session is up.
-9. Enables `systemd-oomd` with a `user@.service` drop-in that kills
-   the heaviest user cgroup under memory pressure (multi-agent OOM
-   resilience).
-10. Enables sudo `pwfeedback` — shows `*` while typing the password
-    (validated with `visudo` so a typo can't lock you out).
+9. Enables `systemd-oomd` with a `user@.service` drop-in that kills the heaviest
+   user cgroup under memory pressure (multi-agent OOM resilience).
+10. Enables sudo `pwfeedback` — shows `*` while typing the password (validated
+    with `visudo` so a typo can't lock you out).
 
 Then prints the GPG / SSH public keys + a checklist of next steps.
 
@@ -234,19 +241,19 @@ Then prints the GPG / SSH public keys + a checklist of next steps.
 sudo systemctl reboot
 ```
 
-After reboot, systemd autologins you on tty1, your zsh `.zprofile`
-detects tty1 + no Wayland, and `exec`s `niri --session`. Because exec
-replaces zsh, when niri exits the login shell is gone too — getty
-re-spawns and autologin re-fires, so niri restarts automatically.
-For an emergency shell switch to tty2..tty6 (`Ctrl+Alt+F2..F6`).
+After reboot, systemd autologins you on tty1, your zsh `.zprofile` detects
+tty1 + no Wayland, and `exec`s `niri --session`. Because exec replaces zsh, when
+niri exits the login shell is gone too — getty re-spawns and autologin re-fires,
+so niri restarts automatically. For an emergency shell switch to tty2..tty6
+(`Ctrl+Alt+F2..F6`).
 
 ## macOS (Xcode box)
 
-The CLI/dev half of this repo is cross-platform. The Linux **desktop** —
-niri, kanshi, wlsunset, Noctalia, the Win11 KVM VM — has
-no macOS equivalent and is intentionally skipped there; macOS ships native
-screenshots, display arrangement, and GPU management. `install.sh` and
-`setup.sh` branch on `uname`, so the same scripts run on both OSes.
+The CLI/dev half of this repo is cross-platform. The Linux **desktop** — niri,
+kanshi, wlsunset, Noctalia, the Win11 KVM VM — has no macOS equivalent and is
+intentionally skipped there; macOS ships native screenshots, display
+arrangement, and GPU management. `install.sh` and `setup.sh` branch on `uname`,
+so the same scripts run on both OSes.
 
 ```sh
 # 1. Command Line Tools + Homebrew (prerequisites for everything below)
@@ -277,20 +284,20 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 What the macOS branches do differently:
 
-| Concern        | Linux                          | macOS                                                        |
-| -------------- | ------------------------------ | ------------------------------------------------------------ |
-| Packages       | pacman / paru                  | Homebrew (`Brewfile`); `brew shellenv` probes `/opt/homebrew` + `/usr/local` |
-| zsh plugins    | `/usr/share/zsh/plugins`       | `$HOMEBREW_PREFIX/share` (probed in `.zshrc`)                |
-| SSH auth       | gpg-agent (`gpgconf` socket)   | **same** — gpg-agent parity, `pinentry-mac` auto-pinned       |
-| Caps Lock      | keyd (`/etc/keyd`) → **Ctrl**  | `hidutil` LaunchAgent (`~/Library/LaunchAgents`) → **Cmd**   |
-| Zen `user.js`  | repo `user.js` symlinked into the active `~/.config/zen` profile | repo `user.js` symlinked into `~/Library/Application Support/zen/Profiles` |
-| Ghostty extras | `gtk-*` / `linux-cgroup` keys  | `config-macos.conf` (cmd keybinds) via App Support include    |
-| Desktop / VM   | niri, kanshi, KVM              | skipped — use native macOS                                   |
+| Concern        | Linux                                                            | macOS                                                                        |
+| -------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Packages       | pacman / paru                                                    | Homebrew (`Brewfile`); `brew shellenv` probes `/opt/homebrew` + `/usr/local` |
+| zsh plugins    | `/usr/share/zsh/plugins`                                         | `$HOMEBREW_PREFIX/share` (probed in `.zshrc`)                                |
+| SSH auth       | gpg-agent (`gpgconf` socket)                                     | **same** — gpg-agent parity, `pinentry-mac` auto-pinned                      |
+| Caps Lock      | keyd (`/etc/keyd`) → **Ctrl**                                    | `hidutil` LaunchAgent (`~/Library/LaunchAgents`) → **Cmd**                   |
+| Zen `user.js`  | repo `user.js` symlinked into the active `~/.config/zen` profile | repo `user.js` symlinked into `~/Library/Application Support/zen/Profiles`   |
+| Ghostty extras | `gtk-*` / `linux-cgroup` keys                                    | `config-macos.conf` (cmd keybinds) via App Support include                   |
+| Desktop / VM   | niri, kanshi, KVM                                                | skipped — use native macOS                                                   |
 
-zsh is already the default shell on macOS (Catalina+), and Apple's `/bin/zsh`
-is fine. Homebrew's zsh is **not** in the `Brewfile`, so switch to it only if
-you `brew install zsh` **first** — otherwise `chsh` points your login shell at
-a missing binary and the shell breaks on the next login:
+zsh is already the default shell on macOS (Catalina+), and Apple's `/bin/zsh` is
+fine. Homebrew's zsh is **not** in the `Brewfile`, so switch to it only if you
+`brew install zsh` **first** — otherwise `chsh` points your login shell at a
+missing binary and the shell breaks on the next login:
 
 ```sh
 brew install zsh                                   # REQUIRED first — not in the Brewfile
@@ -307,8 +314,8 @@ fire (System Settings → Privacy & Security → Accessibility).
 
 Apple's system Ruby is 2.6 and deprecated; never `gem install` against it.
 `rbenv` (in the `Brewfile`, initialised in `.zshrc`) is the Ruby analog of nvm:
-it installs and switches between arbitrary Ruby versions — modern *and* legacy
-— and auto-selects per directory from a project's `.ruby-version`.
+it installs and switches between arbitrary Ruby versions — modern _and_ legacy —
+and auto-selects per directory from a project's `.ruby-version`.
 
 ```sh
 rbenv install -l                 # list installable versions
@@ -318,11 +325,11 @@ cd some/project && rbenv local 3.2.6   # pin this dir (writes .ruby-version)
 ruby -v                          # confirms the shim resolved
 ```
 
-`bundler` is installed into every Ruby automatically by the
-`rbenv-default-gems` plugin (driven by the stowed `~/.rbenv/default-gems`).
-`~/.gemrc` (stowed from `ruby/`) sets `--no-document` so installs are fast. The
-`openssl@3` / `libyaml` / `readline` build deps are in the `Brewfile` so
-`ruby-build` can compile any version without missing-header errors.
+`bundler` is installed into every Ruby automatically by the `rbenv-default-gems`
+plugin (driven by the stowed `~/.rbenv/default-gems`). `~/.gemrc` (stowed from
+`ruby/`) sets `--no-document` so installs are fast. The `openssl@3` / `libyaml`
+/ `readline` build deps are in the `Brewfile` so `ruby-build` can compile any
+version without missing-header errors.
 
 > **Legacy Rubies (< 3.1):** these predate OpenSSL 3 and modern Clang and can
 > fail to build. Fixes, in order of preference: pick the newest patch of that
@@ -336,14 +343,14 @@ The `Brewfile` installs the native-build stack: `node`, `watchman`, the `rbenv`
 Ruby toolchain above, `ccache`, `git-lfs`, `xcbeautify`, `ios-deploy`, and
 `fastlane`. **CocoaPods is intentionally _not_ a Homebrew formula** — brew runs
 it on its own Ruby, so `pod` and `bundle exec pod` would resolve to different
-versions; it's installed through the app's `Gemfile` instead (below). **Xcode
-is not a Homebrew package** either and must be installed separately.
+versions; it's installed through the app's `Gemfile` instead (below). **Xcode is
+not a Homebrew package** either and must be installed separately.
 
-**Xcode 26 on Intel.** Xcode 26 is a *Universal* binary and runs on the Intel
+**Xcode 26 on Intel.** Xcode 26 is a _Universal_ binary and runs on the Intel
 Macs macOS 26 Tahoe still supports (MacBook Pro 16″ 2019 / 13″ 2020, iMac 2020,
 Mac Pro 2019) — it needs macOS Sequoia 15.6+ (Xcode 26.0–26.3) or Tahoe 26.2+
 (26.4.1/26.5). ⚠️ **Do not install it via the `xcodes` CLI or the App Store on
-an Intel Mac** — both can deliver the *arm64-only* `.xip`, which fails to launch
+an Intel Mac** — both can deliver the _arm64-only_ `.xip`, which fails to launch
 with `Bad CPU type in executable`. Instead grab the **Universal** build
 manually:
 
@@ -393,7 +400,8 @@ link — run `xcodebuild -downloadPlatform iOS` or build for a device instead.
 If the iOS build fails in the **"Bundle React Native code and images"** phase
 with `node: command not found`, that's because Xcode build phases don't read
 your shell config (so `nvm`/Homebrew `node` aren't on their `PATH`). Point the
-app's `ios/.xcode.env` at an absolute path: `export NODE_BINARY=$(command -v node)`.
+app's `ios/.xcode.env` at an absolute path:
+`export NODE_BINARY=$(command -v node)`.
 
 > Heads-up: macOS 27 will be Apple-Silicon-only, and CocoaPods goes read-only in
 > Dec 2026. Fine for a legacy app with a locked `Podfile.lock`, but this Intel
@@ -405,16 +413,16 @@ app's `ios/.xcode.env` at an absolute path: `export NODE_BINARY=$(command -v nod
 
 - **Commit / tag signing** — primary `[C]` + sign `[S]` subkey.
 - **SSH auth** — `[A]` subkey, served by gpg-agent's SSH socket. No
-  `~/.ssh/id_ed25519` is generated; `ssh` talks to gpg-agent via
-  `SSH_AUTH_SOCK` (exported by `~/.zshrc`).
+  `~/.ssh/id_ed25519` is generated; `ssh` talks to gpg-agent via `SSH_AUTH_SOCK`
+  (exported by `~/.zshrc`).
 
-You upload **two** keys to GitHub — same underlying private key, two
-different public formats:
+You upload **two** keys to GitHub — same underlying private key, two different
+public formats:
 
-- <https://github.com/settings/gpg/new> — armored GPG export, used to
-  verify commit signatures.
-- <https://github.com/settings/ssh/new> — output of `gpg --export-ssh-key`,
-  used so `git push` over SSH authenticates against gpg-agent.
+- <https://github.com/settings/gpg/new> — armored GPG export, used to verify
+  commit signatures.
+- <https://github.com/settings/ssh/new> — output of `gpg --export-ssh-key`, used
+  so `git push` over SSH authenticates against gpg-agent.
 
 `setup.sh` prints both blocks at the end.
 
@@ -422,31 +430,32 @@ different public formats:
 
 ### niri
 
-- `Super + Shift + /` — show the keybind overlay (read this first).
-- `Super + Q` — open Ghostty.
-- `Super + E` — open Yazi (file manager in Ghostty).
-- `Super + Space` — Noctalia app launcher.
-- `Super + Shift + Q` — Noctalia session menu (logout / reboot / shutdown).
-- `Super + H/J/K/L` — focus column-left / window-down / window-up / column-right.
-- `Super + Ctrl + H/J/K/L` — move the focused column/window in that direction.
-- `Super + 1..9` — focus workspace; `Super + Shift + 1..9` — move column to.
-- `Super + Shift + arrows` — focus monitor in that direction; add `Ctrl` to
-  move the focused column across monitors. At startup Ghostty lands on ws1
-  and Zen on ws2 of the monitor focused at spawn time.
-- `Super + ,` / `Super + .` — consume/expel a window from the current column.
-- `Super + R` — cycle preset column widths (1/3 → 1/2 → 2/3).
-- `Super + F` — maximize column; `Super + Shift + F` — true fullscreen.
-- `Super + W` — toggle column tabbed display.
-- `Super + V` — toggle floating.
-- `Super + O` — overview.
-- `Super + C` — close window.
-- `Super + Escape` — Noctalia lock (`Super + L` is focus-column-right).
+- `Alt + Shift + /` — show the keybind overlay (read this first).
+- `Alt + Q` — open Ghostty.
+- `Alt + E` — open Yazi (file manager in Ghostty).
+- `Alt + Space` — Noctalia app launcher.
+- `Alt + Shift + Q` — Noctalia session menu (logout / reboot / shutdown).
+- `Alt + H/J/K/L` — focus column-left / window-down / window-up / column-right.
+- `Alt + Ctrl + H/J/K/L` — move the focused column/window in that direction.
+- `Alt + 1..9` — focus workspace; `Alt + Shift + 1..9` — move column to.
+- `Alt + Shift + arrows` — focus monitor in that direction; add `Ctrl` to move
+  the focused column across monitors. At startup Ghostty lands on ws1 and Zen on
+  ws2 of the monitor focused at spawn time.
+- `Alt + ,` / `Alt + .` — consume/expel a window from the current column.
+- `Alt + R` — cycle preset column widths (1/3 → 1/2 → 2/3).
+- `Alt + F` — maximize column; `Alt + Shift + F` — true fullscreen.
+- `Alt + W` — toggle column tabbed display.
+- `Alt + V` — toggle floating.
+- `Alt + O` — overview.
+- `Alt + C` — close window.
+- `Alt + Escape` — Noctalia lock (`Alt + L` is focus-column-right).
 - `Ctrl + Alt + Delete` — quit niri (deliberately a hard-to-mishit chord).
 - `Print` — interactive screenshot (region by default).
 - Keyboard backlight: **`Fn + Space`** (native, EC-handled; defaults to off at
   boot via a udev rule — see TUXEDO hardware).
 
-Full reference: <https://github.com/niri-wm/niri/wiki/Configuration:-Key-Bindings>.
+Full reference:
+<https://github.com/niri-wm/niri/wiki/Configuration:-Key-Bindings>.
 
 ### Ghostty
 
@@ -457,7 +466,7 @@ Full reference: <https://github.com/niri-wm/niri/wiki/Configuration:-Key-Binding
 - `Ctrl + Shift + J/K` — focus next/previous split.
 - `Ctrl + Shift + Z` — zoom split; `F11` — fullscreen.
 - `Ctrl + Shift + ,` — reload config.
-- ``Super + ` `` — toggle quick-terminal (dropdown from top).
+- ``Alt + ` `` — toggle quick-terminal (dropdown from top).
 
 Full reference: <https://ghostty.org/docs/config/keybind/reference>.
 
@@ -475,7 +484,7 @@ with `paru -S`):
   first install for a clean module handoff.
 - **`tailord` + `tailor-gui`** — the
   [tuxedo-rs](https://github.com/AaronErhardt/tuxedo-rs) project (note:
-  `tuxedo-rs` itself is *not* an installable package). A lightweight Rust
+  `tuxedo-rs` itself is _not_ an installable package). A lightweight Rust
   fan-curve / profile daemon + native GTK4 app, chosen over **Tuxedo Control
   Center** (Electron + `tccd`): it does not fight `power-profiles-daemon` over
   the CPU governor. Don't run TCC and tuxedo-rs together. Enable the daemon with
@@ -499,8 +508,8 @@ those three show in **`tailor_gui`**. Switch anytime in the GUI; tune the curves
 in `tailord/fan/*.json` and rerun `setup.sh`.
 
 **Battery charge limit.** `setup.sh` installs a `battery-charge-limit.service`
-that caps charging for longevity, detecting whichever knob the board exposes:
-a numeric `charge_control_end_threshold` (writes `80`), or TUXEDO's
+that caps charging for longevity, detecting whichever knob the board exposes: a
+numeric `charge_control_end_threshold` (writes `80`), or TUXEDO's
 `charging_profile` selector — `high_capacity` (100%) / `balanced` (~90%) /
 `stationary` (~80%, the longevity setting; what the InfinityBook Pro 14 AMD
 Gen10 uses). The sysfs only appears once `tuxedo-drivers` is loaded, so reboot
@@ -508,23 +517,25 @@ after the first install, then rerun `setup.sh`. Pick a different ceiling by
 editing the unit's `ExecStart` value; remove it with
 `sudo systemctl disable --now battery-charge-limit.service`.
 
-**Wired 2.5G Ethernet (Motorcomm YT6801).** The in-tree driver works on the
-main `linux-cachyos` kernel, but the module is absent from `linux-cachyos-lts`.
+**Wired 2.5G Ethernet (Motorcomm YT6801).** The in-tree driver works on the main
+`linux-cachyos` kernel, but the module is absent from `linux-cachyos-lts`.
 Install `tuxedo-yt6801-dkms-git` (offered by `setup.sh`) so wired networking
 also works when you boot the LTS fallback kernel.
 
 **Firmware.** TUXEDO does **not** publish BIOS/EC updates to LVFS/`fwupd` for
 this model — flash those manually from your TUXEDO account. `fwupd` is still
-worth having for SSD/peripheral firmware (`fwupdmgr refresh && fwupdmgr update`).
-No kernel cmdline tweaks are needed: `amd_pstate` is already in `active` mode and
-`s2idle` is the correct suspend state for Strix Point (do **not** force `deep`).
+worth having for SSD/peripheral firmware
+(`fwupdmgr refresh && fwupdmgr update`). No kernel cmdline tweaks are needed:
+`amd_pstate` is already in `active` mode and `s2idle` is the correct suspend
+state for Strix Point (do **not** force `deep`).
 
-**CPU power profiles.** The stack is `amd-pstate-epp` + **power-profiles-daemon**
-(the standard; do not add TLP/tuned/cpupower — they conflict). The Noctalia bar's
-PowerProfile widget toggles ppd: `balanced` biases toward power saving (EPP
-`balance_power`, lazy clock ramp), `performance` ramps fully. The selection
-persists across reboots via `/var/lib/power-profiles-daemon/state.ini`, so set
-**Performance** once for a snappy default — no custom service needed.
+**CPU power profiles.** The stack is `amd-pstate-epp` +
+**power-profiles-daemon** (the standard; do not add TLP/tuned/cpupower — they
+conflict). The Noctalia bar's PowerProfile widget toggles ppd: `balanced` biases
+toward power saving (EPP `balance_power`, lazy clock ramp), `performance` ramps
+fully. The selection persists across reboots via
+`/var/lib/power-profiles-daemon/state.ini`, so set **Performance** once for a
+snappy default — no custom service needed.
 
 ## Bluetooth
 
@@ -552,50 +563,50 @@ find ~ -maxdepth 1 -name '.gitconfig*.bak.*' -mtime +30 -delete
   `nvim/.config/nvim` submodule wasn't initialised (its remote is an SSH URL,
   which fails before your key is on GitHub). Init it over HTTPS:
   `git -C ~/.dotfiles -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive`.
-- **macOS — no syntax highlighting / missing `node`, `eza`, etc.**: `brew bundle`
-  was never run. `~/.dotfiles/install.sh` now does it automatically; or run
-  `brew bundle --file=~/.dotfiles/Brewfile` directly.
+- **macOS — no syntax highlighting / missing `node`, `eza`, etc.**:
+  `brew bundle` was never run. `~/.dotfiles/install.sh` now does it
+  automatically; or run `brew bundle --file=~/.dotfiles/Brewfile` directly.
 - **macOS — shell broken after switching to Homebrew zsh** (login falls back or
-  errors): you ran `chsh -s "$(brew --prefix)/bin/zsh"` without `brew install
-  zsh` first, so the login shell points at a nonexistent binary. Recover with
-  `chsh -s /bin/zsh` (Apple's system zsh, always present).
-- `existing target is not owned by stow`: `unlink` (or `rm`) the target
-  and rerun `install.sh`.
-- `Permission denied (publickey)` on `git push`: confirm `SSH_AUTH_SOCK`
-  points at gpg-agent — `echo $SSH_AUTH_SOCK` should match
-  `gpgconf --list-dirs agent-ssh-socket`. If not, restart the shell or
-  run `gpgconf --launch gpg-agent`.
-- Niri starts on a blank screen with cursor only: Noctalia didn't
-  launch. Open Ghostty with `Super+Q` and run `qs -c noctalia-shell &`
-  to start it manually. If that errors, check
+  errors): you ran `chsh -s "$(brew --prefix)/bin/zsh"` without
+  `brew install zsh` first, so the login shell points at a nonexistent binary.
+  Recover with `chsh -s /bin/zsh` (Apple's system zsh, always present).
+- `existing target is not owned by stow`: `unlink` (or `rm`) the target and
+  rerun `install.sh`.
+- `Permission denied (publickey)` on `git push`: confirm `SSH_AUTH_SOCK` points
+  at gpg-agent — `echo $SSH_AUTH_SOCK` should match
+  `gpgconf --list-dirs agent-ssh-socket`. If not, restart the shell or run
+  `gpgconf --launch gpg-agent`.
+- Niri starts on a blank screen with cursor only: Noctalia didn't launch. Open
+  Ghostty with `Alt+Q` and run `qs -c noctalia-shell &` to start it manually.
+  If that errors, check
   `pacman -Qq cachyos-niri-noctalia noctalia-qs noctalia-shell`.
-- External monitor doesn't show up: `niri msg outputs` lists the real
-  output name; update `kanshi/.config/kanshi/config` to match
-  (`HDMI-A-1` and `DP-1` are the most common identifiers).
-- Screen never warms at night: wlsunset is spawned with placeholder
-  `0.00` coordinates. Edit the `spawn-at-startup "wlsunset"` line in
-  `niri/.config/niri/config.kdl` with your real lat/long (decimal
-  degrees), then reload niri or rerun `wlsunset` manually.
-- Autologin doesn't fire: check
-  `sudo systemctl cat getty@tty1` for the `ExecStart=` line containing
-  `--autologin <yourname>`. If absent, rerun `setup.sh` (step 8
-  installs the drop-in). Also verify no display manager is enabled:
-  `systemctl is-enabled sddm gdm lightdm ly greetd`. Any "enabled"
-  here will steal tty1 from autologin.
-- Stuck at a zsh prompt on tty1 after boot (niri-session didn't fire):
-  the `.zprofile` guard didn't match. Run `tty` (must say `/dev/tty1`)
-  and `echo $WAYLAND_DISPLAY` (must be empty). Type `exec niri --session`
-  to start it by hand.
-- **Boots to a CLI + a fastfetch banner instead of niri** (the classic
-  "bad UI"): your login shell is still **fish**, which never sources
-  `~/.zprofile` (where the niri handoff lives) and runs the CachyOS fastfetch
-  greeting. Fix: `chsh -s "$(command -v zsh)"` and reboot — `setup.sh` step 8
-  does this for you.
-- **Caps Lock isn't Ctrl**: `systemctl is-enabled keyd` should say `enabled`
-  and `/etc/keyd/default.conf` should contain `capslock = leftcontrol`. If not,
+- External monitor doesn't show up: `niri msg outputs` lists the real output
+  name; update `kanshi/.config/kanshi/config` to match (`HDMI-A-1` and `DP-1`
+  are the most common identifiers).
+- Screen never warms at night: wlsunset is spawned with placeholder `0.00`
+  coordinates. Edit the `spawn-at-startup "wlsunset"` line in
+  `niri/.config/niri/config.kdl` with your real lat/long (decimal degrees), then
+  reload niri or rerun `wlsunset` manually.
+- Autologin doesn't fire: check `sudo systemctl cat getty@tty1` for the
+  `ExecStart=` line containing `--autologin <yourname>`. If absent, rerun
+  `setup.sh` (step 8 installs the drop-in). Also verify no display manager is
+  enabled: `systemctl is-enabled sddm gdm lightdm ly greetd`. Any "enabled" here
+  will steal tty1 from autologin.
+- Stuck at a zsh prompt on tty1 after boot (niri-session didn't fire): the
+  `.zprofile` guard didn't match. Run `tty` (must say `/dev/tty1`) and
+  `echo $WAYLAND_DISPLAY` (must be empty). Type `exec niri --session` to start
+  it by hand.
+- **Boots to a CLI + a fastfetch banner instead of niri** (the classic "bad
+  UI"): your login shell is still **fish**, which never sources `~/.zprofile`
+  (where the niri handoff lives) and runs the CachyOS fastfetch greeting. Fix:
+  `chsh -s "$(command -v zsh)"` and reboot — `setup.sh` step 8 does this for
+  you.
+- **Caps Lock isn't Ctrl**: `systemctl is-enabled keyd` should say `enabled` and
+  `/etc/keyd/default.conf` should contain `capslock = leftcontrol`. If not,
   rerun `setup.sh` (step 6), then `sudo systemctl restart keyd`. Note: on Tuxedo
-  OS the keyd-team PPA names the binary `keyd.rvaiya` (the service stays `keyd`),
-  so reload via `systemctl` — a bare `keyd reload` will say "command not found".
+  OS the keyd-team PPA names the binary `keyd.rvaiya` (the service stays
+  `keyd`), so reload via `systemctl` — a bare `keyd reload` will say "command
+  not found".
 - **Keyboard backlight keys do nothing / `white:kbd_backlight` missing**:
   `tuxedo-drivers-dkms` isn't loaded. Confirm it's installed
   (`pacman -Qq tuxedo-drivers-dkms`) and **reboot** so the platform modules

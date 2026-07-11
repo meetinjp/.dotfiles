@@ -13,6 +13,8 @@
 // ─── INPUT ───────────────────────────────────────────────────────────────────
 
 input {
+	mod-key "Alt"
+
     keyboard {
         xkb {
             layout "pl"
@@ -229,7 +231,7 @@ spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || ghostty"
 spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || zen-browser"
 
 // ─── KEYBINDINGS ─────────────────────────────────────────────────────────────
-// Mod = Super (the Tux / Windows key) — niri's default modifier.
+// Mod = Alt (set via mod-key above; niri's default is Super).
 // Lock is Mod+Escape; Mod+L is focus-column-right so lock can't sit there.
 // Noctalia actions go through `qs -c noctalia-shell ipc call <module> <verb>`.
 

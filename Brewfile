@@ -48,6 +48,12 @@ brew "openssl@3"                  # TLS for compiled Ruby (ruby-build links agai
 brew "libyaml"                    # Ruby psych/YAML ext — CocoaPods + fastlane configs need it
 brew "readline"                   # line editing for compiled Ruby / irb
 
+# ─── Python (pyenv — the "nvm for Python") ───────────────────────────────────
+# Version manager for arbitrary/per-project Pythons (.python-version), alongside
+# uv for pip/venv. pyenv bundles python-build, so no separate formula needed.
+# Initialised in .zshrc (`eval "$(pyenv init - zsh)"`).
+brew "pyenv"
+
 # ─── Mobile / React Native / iOS build toolchain ─────────────────────────────
 # Build the legacy React Native app for iOS / iPad. Node is in Languages above;
 # Ruby is the rbenv block above. CocoaPods is deliberately NOT a brew formula:

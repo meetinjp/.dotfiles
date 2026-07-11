@@ -83,7 +83,7 @@ linux-cgroup-memory-limit = 8589934592
 quick-terminal-position = top
 quick-terminal-animation-duration = 0.15
 quick-terminal-autohide = true
-keybind = global:super+grave_accent=toggle_quick_terminal
+keybind = global:alt+grave_accent=toggle_quick_terminal
 
 # ─── Notifications ───────────────────────────────────────────────────────────
 # Notify when a backgrounded command finishes (only if window unfocused).

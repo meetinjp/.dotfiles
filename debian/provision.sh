@@ -61,6 +61,10 @@ APT_PKGS=(
 	gnupg pinentry-curses gh python3 python3-venv python3-pip
 	fonts-firacode fonts-noto-core fonts-noto-color-emoji fonts-noto-cjk locales
 	software-properties-common
+	# pyenv build deps (compiling a Python from source needs these headers —
+	# see https://github.com/pyenv/pyenv/wiki#suggested-build-environment).
+	libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev
+	libncurses-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 )
 log "apt: updating + installing base/desktop/CLI packages…"
 sudo apt-get update -y || warn "apt update failed"
@@ -313,8 +317,9 @@ if [[ -f "$ZEN_DESKTOP" ]]; then
 	log "patched zen.desktop + set Zen as default browser"
 fi
 
-# ── 9. uv / nvm / bun (per-user runtime managers; cross-distro) ─────────────
+# ── 9. uv / pyenv / nvm / bun (per-user runtime managers; cross-distro) ─────
 have uv  || { log "installing uv…";  curl -LsSf https://astral.sh/uv/install.sh | sh || warn "uv failed"; }
+[[ -d "$HOME/.pyenv/bin" ]] || { log "installing pyenv…"; curl -fsSL https://pyenv.run | bash || warn "pyenv failed"; }
 [[ -s "$HOME/.nvm/nvm.sh" ]] || { log "installing nvm ${NVM_TAG}…"; curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_TAG}/install.sh" | bash || warn "nvm failed"; }
 [[ -x "$HOME/.bun/bin/bun" ]] || { log "installing bun…"; curl -fsSL https://bun.com/install | bash || warn "bun failed"; }
 
