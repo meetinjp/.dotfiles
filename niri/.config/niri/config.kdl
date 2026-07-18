@@ -17,8 +17,9 @@ input {
 
     keyboard {
         xkb {
-            layout "pl"
+            layout "pl,gr"
             // Caps Lock → Ctrl is handled OS-level by keyd, not here.
+			variant ",polytonic"
         }
         repeat-delay 400
         repeat-rate 30
@@ -368,4 +369,6 @@ binds {
     Print                { screenshot; }
     Ctrl+Print           { screenshot-screen; }
     Mod+Print            { screenshot-window; }
+
+	Mod+Shift+Space { switch-layout "next"; }
 }
