@@ -52,6 +52,7 @@ fi
 # the whole profile into the repo. link_browser_userjs symlinks the repo's
 # user.js straight into the active profile instead.
 COMMON_DIRS=(
+	claude-skills
 	ghostty
 	nvim
 	prettier

@@ -47,6 +47,7 @@ browser is Zen (`zen-browser`), set both via xdg-mime and the `$BROWSER` env var
 | ------------ | ---------------------------------------------------------------- | ----------------------- |
 | `bin/`       | `~/.local/bin/` scripts (`niri-screenshot`)                      | stowed                  |
 | `claude/`    | Claude Code config patcher + plugin installer                    | run by `install.sh`     |
+| `claude-skills/` | Global Claude Code skills (`~/.claude/skills/`) — no-coauthor, conventional-commits, systematic-debugging, test-driven-development, verification-before-completion | stowed |
 | `debian/`    | TUXEDO OS (Ubuntu) provisioning — apt + PPAs + scripts/cargo     | run by `install.sh`     |
 | `ghostty/`   | GPU-accelerated terminal (Gruvbox Dark Hard, zsh integration)    | stowed                  |
 | `git/`       | gitconfig templates (identity injected at setup time)            | rendered by `setup.sh`  |
