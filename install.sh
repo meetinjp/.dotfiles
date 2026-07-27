@@ -43,13 +43,22 @@ elif is_debian; then
 	echo "Provisioning Debian/Ubuntu packages (debian/provision.sh)..."
 	"$DOTFILES/debian/provision.sh" || \
 		echo "  provisioning reported warnings — continuing (review them, rerun if needed)."
-elif is_windows && command -v winget &>/dev/null; then
-	echo "Installing GitHub CLI (winget)..."
-	if ! command -v gh &>/dev/null; then
-		winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements || \
-			echo "  winget install of gh reported errors — continuing (rerun manually if needed)."
+elif is_windows; then
+	if command -v winget &>/dev/null; then
+		echo "Installing GitHub CLI (winget)..."
+		# command -v can miss a just-installed gh in a shell whose PATH was
+		# cached before install (winget updates the registry, not this
+		# process's env) — also check the well-known install path so a stale
+		# PATH doesn't make winget re-run and print a misleading "error" for
+		# what's actually just "no upgrade available".
+		if ! command -v gh &>/dev/null && [[ ! -x "/c/Program Files/GitHub CLI/gh.exe" ]]; then
+			winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements || \
+				echo "  winget install of gh reported errors — continuing (rerun manually if needed)."
+		else
+			echo "  gh already installed."
+		fi
 	else
-		echo "  gh already installed."
+		echo "  winget not found — install GitHub CLI manually: https://cli.github.com"
 	fi
 fi
 
@@ -60,15 +69,23 @@ fi
 if is_windows; then
 	echo "Linking Claude Code skills..."
 	mkdir -p "$HOME/.claude/skills"
+	shopt -s nullglob
 	for skill_dir in "$DOTFILES"/claude-skills/.claude/skills/*/; do
 		name="$(basename "$skill_dir")"
+		target="$HOME/.claude/skills/$name"
+		tmp="$target.new.$$"
 		# `ln -sfn` can't atomically overwrite an existing directory symlink on
 		# Windows (MSYS's replace-in-place hits a Windows rename restriction and
-		# leaves a randomly-named stray link instead) — remove first, then link.
-		rm -rf "$HOME/.claude/skills/$name"
-		ln -s "${skill_dir%/}" "$HOME/.claude/skills/$name"
+		# leaves a randomly-named stray link instead). Link at a temp name first
+		# — under `set -e` a failure here leaves the existing link untouched
+		# instead of deleting it before we know the replacement will work.
+		rm -f "$tmp"
+		ln -s "${skill_dir%/}" "$tmp"
+		rm -rf "$target"
+		mv "$tmp" "$target"
 		echo "  linked $name"
 	done
+	shopt -u nullglob
 	# claude/apply.sh is skipped here: its Python helper imports fcntl, which
 	# doesn't exist on native Windows Python, so it hard-crashes on this OS.
 	echo "Dotfiles installed successfully! (Windows: skills + gh only — see COMMON_DIRS in this script for what else exists)"
