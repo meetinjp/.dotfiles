@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-is_macos()  { [[ "$(uname -s)" == Darwin ]]; }
+is_macos()   { [[ "$(uname -s)" == Darwin ]]; }
 # Distro family via /etc/os-release. CachyOS reports ID_LIKE=arch; TUXEDO OS
 # reports ID=ubuntu (ID_LIKE=debian). macOS matches neither.
-is_debian() { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*(debian|ubuntu)' /etc/os-release 2>/dev/null; }
-is_arch()   { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*arch' /etc/os-release 2>/dev/null; }
+is_debian()  { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*(debian|ubuntu)' /etc/os-release 2>/dev/null; }
+is_arch()    { [[ "$(uname -s)" == Linux ]] && grep -qiE '^(ID|ID_LIKE)=.*arch' /etc/os-release 2>/dev/null; }
+# Git for Windows' bash reports MINGW64_NT-...; plain MSYS2 reports MSYS_NT-...
+is_windows() { [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; }
 
 # perl (used by stow) spams locale warnings if LANG points at an ungenerated
 # locale. Force one that always exists: glibc ships C.UTF-8; macOS/BSD libc
@@ -15,6 +17,14 @@ if is_macos; then
 	export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 else
 	export LC_ALL=C.UTF-8 LANG=C.UTF-8
+fi
+
+# MSYS's `ln -s` silently falls back to copying instead of erroring when it
+# can't get symlink privilege — so without this, the "symlinks" below would
+# quietly become disconnected copies that never see dotfiles-source edits.
+# nativestrict forces a real Windows symlink or a hard failure, no silent copy.
+if is_windows; then
+	export MSYS=winsymlinks:nativestrict
 fi
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,6 +43,36 @@ elif is_debian; then
 	echo "Provisioning Debian/Ubuntu packages (debian/provision.sh)..."
 	"$DOTFILES/debian/provision.sh" || \
 		echo "  provisioning reported warnings — continuing (review them, rerun if needed)."
+elif is_windows && command -v winget &>/dev/null; then
+	echo "Installing GitHub CLI (winget)..."
+	if ! command -v gh &>/dev/null; then
+		winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements || \
+			echo "  winget install of gh reported errors — continuing (rerun manually if needed)."
+	else
+		echo "  gh already installed."
+	fi
+fi
+
+# Windows has no stow (GNU stow isn't packaged for it, and most COMMON_DIRS
+# packages target POSIX tools that don't apply here). The one thing every
+# machine needs regardless of OS is the Claude Code skill set, so link that
+# package directly and stop — no stow, no Linux/macOS-only steps below.
+if is_windows; then
+	echo "Linking Claude Code skills..."
+	mkdir -p "$HOME/.claude/skills"
+	for skill_dir in "$DOTFILES"/claude-skills/.claude/skills/*/; do
+		name="$(basename "$skill_dir")"
+		# `ln -sfn` can't atomically overwrite an existing directory symlink on
+		# Windows (MSYS's replace-in-place hits a Windows rename restriction and
+		# leaves a randomly-named stray link instead) — remove first, then link.
+		rm -rf "$HOME/.claude/skills/$name"
+		ln -s "${skill_dir%/}" "$HOME/.claude/skills/$name"
+		echo "  linked $name"
+	done
+	# claude/apply.sh is skipped here: its Python helper imports fcntl, which
+	# doesn't exist on native Windows Python, so it hard-crashes on this OS.
+	echo "Dotfiles installed successfully! (Windows: skills + gh only — see COMMON_DIRS in this script for what else exists)"
+	exit 0
 fi
 
 if ! command -v stow &>/dev/null; then
