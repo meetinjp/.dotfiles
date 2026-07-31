@@ -572,7 +572,7 @@ fi
 # ---------------------------------------------------------------------------
 banner "9/10  systemd-oomd (kill runaway agents before swap death-spiral)"
 # ---------------------------------------------------------------------------
-# Without oomd: one Claude/agent eats all RAM → kernel OOM-killer fires
+# Without oomd: one Codex/agent eats all RAM → kernel OOM-killer fires
 # randomly, often kills the WM and tanks the session. With oomd: the
 # specific cgroup is killed under memory pressure, rest of session lives.
 if is_macos; then

@@ -31,6 +31,7 @@ brew "yazi"
 
 # ─── Languages / toolchains ──────────────────────────────────────────────────
 brew "node"
+brew "python"                     # python3 for config patchers + general scripting
 brew "go"
 brew "rustup"                     # then run 'rustup default stable' to populate ~/.cargo/bin
 brew "pnpm"

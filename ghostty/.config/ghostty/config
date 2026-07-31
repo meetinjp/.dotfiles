@@ -21,7 +21,7 @@ window-decoration = server
 window-padding-x = 0
 window-padding-y = 0
 # Center cells in window so fractional-scale (niri scale 1.75) rounding
-# doesn't clip the bottom TUI row in Claude / nvim / lazygit.
+# doesn't clip the bottom TUI row in Codex / Claude / nvim / lazygit.
 window-padding-balance = true
 
 # Compact tab strip — merge titlebar + tabs into one thin strip, flat
@@ -74,7 +74,7 @@ confirm-close-surface = false
 
 # ─── Linux resource isolation ────────────────────────────────────────────────
 # Each surface gets its own systemd cgroup. 8 GiB soft cap per surface gives
-# room for multi-Claude / tmux multi-agent workloads without one runaway
+# room for multi-Codex / tmux multi-agent workloads without one runaway
 # tab killing the laptop.
 linux-cgroup = always
 linux-cgroup-memory-limit = 8589934592

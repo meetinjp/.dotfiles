@@ -92,6 +92,24 @@ if is_windows; then
 	exit 0
 fi
 
+# Codex CLI — official standalone installer for macOS/Linux. Keep normal
+# dotfiles runs fast by installing only when absent; opt into an update with
+# DOTFILES_UPDATE_CODEX=1. Authentication remains interactive on first launch.
+if ! command -v codex >/dev/null 2>&1 || [[ "${DOTFILES_UPDATE_CODEX:-0}" == 1 ]]; then
+	if command -v curl >/dev/null 2>&1; then
+		echo "Installing/updating OpenAI Codex CLI..."
+		if curl -fsSL https://chatgpt.com/codex/install.sh | sh; then
+			export PATH="$HOME/.local/bin:$PATH"
+		else
+			echo "  Codex CLI install failed — continuing; rerun the official installer later." >&2
+		fi
+	else
+		echo "  curl missing — skipping Codex CLI install." >&2
+	fi
+else
+	echo "Codex CLI already installed: $(codex --version)"
+fi
+
 if ! command -v stow &>/dev/null; then
 	echo "stow not found. Install GNU stow and rerun." >&2
 	echo "  macOS: brew bundle --file=$DOTFILES/Brewfile   |   Linux: sudo pacman -S stow" >&2
@@ -176,8 +194,12 @@ if ! is_macos && command -v systemctl &>/dev/null; then
 	systemctl --user daemon-reload 2>/dev/null || true
 fi
 
-# Claude Code config — patched rather than stowed since ~/.claude.json is
-# live-mutated by Claude itself.
+# Codex config, global guidance, docs MCP, and plugin — reconciled rather than
+# stowed because ~/.codex also contains live auth, sessions, and project trust.
+"$DOTFILES/codex/apply.sh"
+
+# Claude Code compatibility — retained while Codex is the primary managed
+# agent. ~/.claude.json is live-mutated by Claude itself.
 "$DOTFILES/claude/apply.sh"
 
 # Noctalia colorscheme — patched rather than stowed since Noctalia live-mutates

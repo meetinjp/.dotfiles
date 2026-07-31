@@ -1,0 +1,22 @@
+{
+  "name": "dotfiles",
+  "interface": {
+    "displayName": "Personal Dotfiles"
+  },
+  "plugins": [
+    {
+      "name": "caveman",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/JuliusBrussee/caveman.git",
+        "path": "./plugins/caveman",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

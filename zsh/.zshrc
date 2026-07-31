@@ -85,6 +85,10 @@ export PATH="$PATH:$HOME/.cargo/bin"
 [[ -d /usr/local/go/bin ]] && export PATH="$PATH:/usr/local/go/bin"
 [[ -d "$HOME/go/bin" ]] && export PATH="$PATH:$HOME/go/bin"
 
+# Codex CLI completions. compinit is initialized above; guard keeps fresh
+# machines usable until install.sh installs Codex.
+command -v codex >/dev/null && eval "$(codex completion zsh)"
+
 # Ripgrep
 [[ -f "$HOME/.ripgreprc" ]] && export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 
@@ -125,7 +129,8 @@ export PYENV_ROOT="$HOME/.pyenv"
 [[ -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 command -v pyenv >/dev/null && eval "$(pyenv init - zsh)"
 
-# Claude Code binary — only export if installed.
+# Claude Code compatibility — only export if installed. Codex needs no
+# executable environment variable; it is discovered directly from PATH.
 _claude_bin="$(command -v claude)"
 [[ -n "$_claude_bin" ]] && export CLAUDE_CODE_EXECUTABLE="$_claude_bin"
 unset _claude_bin
