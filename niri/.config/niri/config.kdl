@@ -146,11 +146,12 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
 // ─── ANIMATIONS ──────────────────────────────────────────────────────────────
 
-// Stock niri animations (defaults). Previously customized — slowdown 0.7 (1.4x
-// faster) + workspace-switch { off; } to hide a brief Noctalia-bar flash when
-// switching between workspaces that both have a fullscreen window. Reverted to
-// defaults on request. If that bar-flash on fullscreen workspace switches
-// bothers you, re-add an `animations { workspace-switch { off; } }` block here.
+// Keep workspace changes instantaneous; retain the stock animations elsewhere.
+animations {
+    workspace-switch {
+        off
+    }
+}
 
 // ─── WINDOW RULES ────────────────────────────────────────────────────────────
 
