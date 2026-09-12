@@ -59,7 +59,7 @@ input {
 // adjust below if needed. scale 1.75 = larger text + UI on the 2880x1800
 // panel; bump higher for chunkier, drop to 1.0 for native pixel-perfect.
 output "eDP-1" {
-    mode "2880x1800@120"
+    mode "2880x1800@120.000"
     scale 1.75
     transform "normal"
     position x=0 y=0
@@ -73,10 +73,13 @@ output "eDP-1" {
 // this must be recomputed, or the outputs overlap and niri discards the
 // position with only a WARN ("falling back to automatic placement").
 //
-// VRR is deliberately not configured. Forcing it on blanked this panel on
-// 2026-09-12, and `on-demand=true` never engaged at all because it requires
-// a matching `variable-refresh-rate` window rule and nothing that runs here
-// is a variable-framerate 3D app. Re-add it if you install a game.
+// VRR is deliberately not configured. Forcing it on coincided with this
+// panel going blank on 2026-09-12 and removing it restored the picture, but
+// the cause was never confirmed — neither niri nor the kernel logged
+// anything — so treat always-on as suspect rather than proven broken. The
+// `on-demand=true` alternative never engaged at all: it requires a matching
+// `variable-refresh-rate` window rule, and nothing that runs here is a
+// variable-framerate 3D app. Re-add it if you install a game.
 output "HDMI-A-1" {
     mode "1920x1080@240"
     scale 1
