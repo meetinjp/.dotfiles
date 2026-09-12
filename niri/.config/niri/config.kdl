@@ -63,7 +63,6 @@ output "eDP-1" {
     scale 1.75
     transform "normal"
     position x=0 y=0
-    variable-refresh-rate on-demand=true
 }
 
 // Dell SE2426HG. EDID-preferred mode is only 60 Hz, so the refresh rate must
@@ -74,20 +73,15 @@ output "eDP-1" {
 // this must be recomputed, or the outputs overlap and niri discards the
 // position with only a WARN ("falling back to automatic placement").
 //
-// VRR is on-demand rather than always-on. Forcing it on blanked this panel
-// on 2026-09-12; on-demand fixed it, but the cause was never confirmed
-// (neither niri nor the kernel logged anything), so treat always-on as
-// suspect rather than proven broken.
-//
-// on-demand does nothing on its own: niri only enables VRR while the output
-// shows a window matching the `variable-refresh-rate` window rule. That rule
-// is at the bottom of this file — without it VRR never engages at all.
+// VRR is deliberately not configured. Forcing it on blanked this panel on
+// 2026-09-12, and `on-demand=true` never engaged at all because it requires
+// a matching `variable-refresh-rate` window rule and nothing that runs here
+// is a variable-framerate 3D app. Re-add it if you install a game.
 output "HDMI-A-1" {
     mode "1920x1080@240"
     scale 1
     transform "normal"
     position x=1646 y=0
-    variable-refresh-rate on-demand=true
 }
 
 // ─── LAYOUT ──────────────────────────────────────────────────────────────────
@@ -214,28 +208,6 @@ window-rule {
     match app-id="^zen$" at-startup=true
     open-on-workspace "2"
     open-fullscreen true
-}
-
-// ── Variable refresh rate ──
-// Required for `variable-refresh-rate on-demand=true` on the outputs above:
-// niri enables VRR only while an output shows a window matched here.
-//
-// NOTE: as of 2026-09-12 none of these apps are installed, so this rule
-// matches nothing and VRR is inert on both outputs. That is deliberate —
-// the entries are here so VRR starts working the day a game is installed,
-// not because it does anything today. Check with `niri msg windows` before
-// assuming VRR is active.
-//
-// Deliberately NOT matched: zen, ghostty and other always-open windows.
-// Matching a permanently visible app would make on-demand equivalent to
-// always-on, which is the configuration suspected of blanking the Dell on
-// 2026-09-12. VRR is for variable-framerate 3D output, not for a browser or
-// a terminal sitting at a fixed refresh rate.
-window-rule {
-    match app-id="^mpv$"
-    match app-id="^steam_app_"
-    match app-id="^gamescope$"
-    variable-refresh-rate true
 }
 
 // ─── SWITCH EVENTS ───────────────────────────────────────────────────────────
