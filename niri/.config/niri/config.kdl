@@ -62,6 +62,17 @@ output "eDP-1" {
     variable-refresh-rate on-demand=true
 }
 
+// Dell SE2426HG (240 Hz VA). EDID-preferred mode is only 60 Hz, so the
+// refresh rate must be pinned explicitly or niri lands on 60.
+// x=1645 = eDP-1 logical width at scale 1.75, so the two sit flush.
+output "HDMI-A-1" {
+    mode "1920x1080@240.000"
+    scale 1
+    transform "normal"
+    position x=1645 y=0
+    variable-refresh-rate
+}
+
 // ─── LAYOUT ──────────────────────────────────────────────────────────────────
 
 layout {
