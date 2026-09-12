@@ -2,20 +2,19 @@
 # Reference: man 5 kanshi
 # Niri exposes outputs over its IPC; kanshi talks to it directly.
 #
-# When you plug in an external monitor for the first time, find its name:
-#   niri msg outputs
-# then update the output identifier below (HDMI-A-1, DP-1, "Make Model Serial", etc).
+# To add a monitor, get its name from `niri msg outputs` (HDMI-A-1, DP-1, or a
+# "Make Model Serial" description) and write a new profile for the set of
+# outputs that will be connected together.
 
 # Laptop alone.
 profile laptop {
-    output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75
+    output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75 adaptive_sync off
 }
 
 # Laptop + 1 external. Laptop on left, external (Dell SE2426HG) on right.
 #
-# These values MUST mirror the output blocks in niri/.config/niri/config.kdl,
-# which is the source of truth. kanshi wins on hotplug, so a mismatch shows up
-# as a setting that silently reverts itself when you replug.
+# These values MUST stay identical to the output blocks in
+# niri/.config/niri/config.kdl; see the OUTPUT section there for why.
 #
 # eDP-1 is 1646 logical px wide at scale 1.75 (2880/1.75 = 1645.71, rounded
 # up), so the external starts at x=1646. 1645 overlaps and niri throws the
@@ -24,10 +23,10 @@ profile laptop {
 # The @240 is mandatory: the panel's EDID-preferred mode is 60 Hz, so an
 # unqualified `mode 1920x1080` silently drops it to 60.
 #
-# adaptive_sync off is explicit so this profile cannot leave VRR forced on;
-# niri's own `variable-refresh-rate on-demand=true` re-enables it per-frame
-# for fullscreen windows.
+# adaptive_sync off is explicit so this profile cannot leave VRR forced on.
+# niri turns it back on by itself while an output shows a window matching the
+# `variable-refresh-rate` window rule in its own config.
 profile docked {
-    output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75
+    output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75 adaptive_sync off
     output HDMI-A-1 mode 1920x1080@240 position 1646,0 scale 1 adaptive_sync off
 }

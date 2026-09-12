@@ -47,17 +47,19 @@ input {
 }
 
 // ─── OUTPUT ──────────────────────────────────────────────────────────────────
-// Source of truth for output layout. kanshi re-applies the same values over
-// Niri IPC on hotplug (laptop / laptop+external profiles); when you change
-// anything here, mirror it in kanshi/.config/kanshi/config or the setting
-// will revert itself on the next replug.
+// Two things write output state, at different moments:
+//   - the blocks below, applied at niri startup and on every config reload;
+//   - kanshi/.config/kanshi/config, applied on hotplug.
+// Neither overrides the other permanently — whichever ran last is what you
+// see. So the values must be kept identical in both files, or a setting
+// appears correct until you replug and then silently changes.
 
 // PER-HOST: output name (eDP-1 / eDP-2 / etc.), resolution, refresh, and
 // scale depend on the laptop panel. Confirm via `niri msg outputs` and
 // adjust below if needed. scale 1.75 = larger text + UI on the 2880x1800
 // panel; bump higher for chunkier, drop to 1.0 for native pixel-perfect.
 output "eDP-1" {
-    mode "2880x1800@120.000"
+    mode "2880x1800@120"
     scale 1.75
     transform "normal"
     position x=0 y=0
@@ -76,6 +78,10 @@ output "eDP-1" {
 // on 2026-09-12; on-demand fixed it, but the cause was never confirmed
 // (neither niri nor the kernel logged anything), so treat always-on as
 // suspect rather than proven broken.
+//
+// on-demand does nothing on its own: niri only enables VRR while the output
+// shows a window matching the `variable-refresh-rate` window rule. That rule
+// is at the bottom of this file — without it VRR never engages at all.
 output "HDMI-A-1" {
     mode "1920x1080@240"
     scale 1
@@ -208,6 +214,19 @@ window-rule {
     match app-id="^zen$" at-startup=true
     open-on-workspace "2"
     open-fullscreen true
+}
+
+// ── Variable refresh rate ──
+// Required for `variable-refresh-rate on-demand=true` on the outputs above:
+// niri enables VRR only while an output shows a window matched here. Entries
+// for apps that are not installed simply never match, so this list is safe to
+// carry between machines.
+window-rule {
+    match app-id="^mpv$"
+    match app-id="^steam_app_"
+    match app-id="^gamescope$"
+    match app-id="^org\\.prismlauncher\\.PrismLauncher$"
+    variable-refresh-rate true
 }
 
 // ─── SWITCH EVENTS ───────────────────────────────────────────────────────────
