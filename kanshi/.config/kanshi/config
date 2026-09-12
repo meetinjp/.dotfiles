@@ -17,5 +17,5 @@ profile laptop {
 # unqualified `mode 1920x1080` silently drops it to 60.
 profile docked {
     output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75
-    output HDMI-A-1 mode 1920x1080@240 position 1645,0 scale 1 adaptive_sync on
+    output HDMI-A-1 mode 1920x1080@240 position 1646,0 scale 1
 }
