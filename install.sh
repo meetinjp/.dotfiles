@@ -202,8 +202,8 @@ fi
 # agent. ~/.claude.json is live-mutated by Claude itself.
 "$DOTFILES/claude/apply.sh"
 
-# Noctalia colorscheme — patched rather than stowed since Noctalia live-mutates
-# its settings.json. Pins the Gruvbox scheme; Linux-only (no-op on macOS).
+# Noctalia colorscheme and idle settings — patched rather than stowed since
+# Noctalia live-mutates settings.json. Linux-only (no-op on macOS).
 "$DOTFILES/noctalia/apply.sh"
 
 # Zen Browser user.js — Zen's profile dir is per-install-hashed. Resolve the

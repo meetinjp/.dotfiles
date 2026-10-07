@@ -55,7 +55,7 @@ browser is Zen (`zen-browser`), set both via xdg-mime and the `$BROWSER` env var
 | `git/`       | gitconfig templates (identity injected at setup time)            | rendered by `setup.sh`  |
 | `kanshi/`    | auto-switch monitor profiles (laptop / docked)                   | stowed                  |
 | `niri/`      | Wayland compositor — scrollable tiling                           | stowed                  |
-| `noctalia/`  | Noctalia colorscheme patcher (pins Gruvbox)                      | run by `install.sh`     |
+| `noctalia/`  | Noctalia settings patcher (Gruvbox + conservative idle timeouts) | run by `install.sh`     |
 | `nvim/`      | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)    | stowed                  |
 | `prettier/`  | global prettier config                                           | stowed                  |
 | `ripgrep/`   | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)            | stowed                  |
@@ -71,9 +71,24 @@ Bar / launcher / notifications / lock / polkit / wallpaper are all provided by
 **Noctalia** (the `cachyos-niri-noctalia` package). Noctalia is configured at
 runtime via its own settings UI and live-mutates
 `~/.config/noctalia/settings.json`, so it isn't stowed. `install.sh` runs
-`noctalia/apply.sh` to pin the **Gruvbox** colorscheme (a flock'd JSON merge,
-same pattern as `claude/apply.sh`); everything else stays Noctalia's own
-defaults. It also applies live via Noctalia's IPC if the shell is running.
+`noctalia/apply.sh` to pin the **Gruvbox** colorscheme and enable conservative
+idle handling (a flock'd JSON merge, same pattern as `claude/apply.sh`).
+After no keyboard or mouse activity, displays turn off at **20 minutes**, the
+session locks at **25 minutes**, and the laptop suspends at **60 minutes**.
+Each stage has a **10-second** fade that input can cancel. Timeouts count from
+the last input, not from the previous stage. Locking before suspend is enabled.
+These settings apply on both battery and AC power. Noctalia watches the file
+and reloads changes without restarting the shell; unrelated settings are
+preserved. Rerunning `noctalia/apply.sh` restores these managed values.
+
+For long reading sessions, presentations, or unattended builds, toggle
+Noctalia's **Keep Awake** control, or enable it for two hours with:
+
+```sh
+qs -c noctalia-shell ipc call idleInhibitor enableFor 7200
+```
+
+Disable it early with `qs -c noctalia-shell ipc call idleInhibitor disable`.
 
 ## Codex
 

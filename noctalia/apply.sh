@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Idempotently pin the Noctalia colorscheme to Gruvbox. Noctalia live-mutates
+# Idempotently pin the Noctalia colorscheme and conservative idle timeouts.
+# Noctalia live-mutates
 # ~/.config/noctalia/settings.json (its settings UI rewrites it), so we can't
-# stow or symlink it — we reconcile only the colorSchemes keys we care about,
+# stow or symlink it — we reconcile only the settings we care about,
 # the same way claude/apply.sh reconciles ~/.claude.json. Everything else stays
 # Noctalia's own runtime config. Linux desktop only (no Noctalia on macOS).
 set -euo pipefail
@@ -15,12 +16,23 @@ import os
 import sys
 from pathlib import Path
 
-# Only the keys we own. Noctalia fills the rest of colorSchemes with its
-# defaults; we just force the scheme and keep wallpaper-derived colors off so
-# the pinned scheme isn't overridden.
+# Only the keys we own. Noctalia fills the remaining settings with defaults.
+# Timeouts are seconds since the last input, not delays between stages.
 DESIRED = {
-    "predefinedScheme": "Gruvbox",
-    "useWallpaperColors": False,
+    "colorSchemes": {
+        "predefinedScheme": "Gruvbox",
+        "useWallpaperColors": False,
+    },
+    "idle": {
+        "enabled": True,
+        "screenOffTimeout": 1200,
+        "lockTimeout": 1500,
+        "suspendTimeout": 3600,
+        "fadeDuration": 10,
+    },
+    "general": {
+        "lockOnSuspend": True,
+    },
 }
 
 path = Path.home() / ".config" / "noctalia" / "settings.json"
@@ -44,20 +56,26 @@ with path.open("r+", encoding="utf-8") as f:
         print(f"error: {path} is not a JSON object", file=sys.stderr)
         sys.exit(1)
 
-    cs = data.get("colorSchemes")
-    if not isinstance(cs, dict):
-        cs = {}
-    changed = [k for k, v in DESIRED.items() if cs.get(k) != v]
-    cs.update(DESIRED)
-    data["colorSchemes"] = cs
+    changed = []
+    for section, desired in DESIRED.items():
+        current = data.get(section)
+        if not isinstance(current, dict):
+            current = {}
+        changed.extend(
+            f"{section}.{key}"
+            for key, value in desired.items()
+            if current.get(key) != value
+        )
+        current.update(desired)
+        data[section] = current
 
     if changed:
         f.seek(0)
         f.truncate()
         f.write(json.dumps(data, indent=2) + "\n")
-        print(f"updated {path}: colorSchemes {', '.join(changed)}")
+        print(f"updated {path}: {', '.join(changed)}")
     else:
-        print(f"{path}: colorscheme already Gruvbox")
+        print(f"{path}: colorscheme and idle settings already applied")
     # flock released when f closes.
 PY
 
