@@ -317,6 +317,22 @@ if [[ -f "$ZEN_DESKTOP" ]]; then
 	log "patched zen.desktop + set Zen as default browser"
 fi
 
+# ── 8b. Brave browser (official apt repo, release channel) ──────────────────
+# Work browser, installed alongside Zen (Zen stays the default). Keyring and
+# deb822 .sources are fetched verbatim from Brave's own install docs.
+if ! have brave-browser; then
+	log "installing brave-browser (official repo)…"
+	if sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
+			https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg \
+		&& sudo curl -fsSLo /etc/apt/sources.list.d/brave-browser-release.sources \
+			https://brave-browser-apt-release.s3.brave.com/brave-browser.sources; then
+		sudo apt-get update -y || true
+		sudo apt-get install -y brave-browser || warn "brave-browser install failed"
+	else
+		warn "Brave keyring/sources fetch failed"
+	fi
+fi
+
 # ── 9. uv / pyenv / nvm / bun (per-user runtime managers; cross-distro) ─────
 have uv  || { log "installing uv…";  curl -LsSf https://astral.sh/uv/install.sh | sh || warn "uv failed"; }
 [[ -d "$HOME/.pyenv/bin" ]] || { log "installing pyenv…"; curl -fsSL https://pyenv.run | bash || warn "pyenv failed"; }

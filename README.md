@@ -130,7 +130,8 @@ git clone --recursive https://github.com/meetinjp/.dotfiles.git ~/.dotfiles
 `NIRI_TAG` — noble has no niri package, so the binary + SDDM session file +
 portal config + user units are installed by hand), **Ghostty**
 (`ppa:mkasberg/ghostty-ubuntu`), **keyd** (`ppa:keyd-team/ppa` — note the binary
-is `keyd.rvaiya`), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh +
+is `keyd.rvaiya`), **Brave** (official apt repo, release channel — work
+browser, alongside Zen), the apt CLI/desktop set (eza, ripgrep, fd, fzf, zsh +
 plugins, kanshi, wlsunset, grim/slurp, portals, plus the Qt6 + polkit + libdrm
 build deps Noctalia needs, …), and the non-apt pieces via official scripts /
 cargo / tarball (**starship, yazi, xwayland-satellite (from git, not crates.io),

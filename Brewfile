@@ -80,6 +80,7 @@ cask "xcodes-app"                 # GUI to manage Xcode versions (mind the Intel
 # ─── GUI apps + font ─────────────────────────────────────────────────────────
 cask "ghostty"                    # terminal (native AppKit/Metal build)
 cask "firefox@developer-edition"  # FDE — install.sh links Betterfox user.js into it
+cask "brave-browser"              # work browser
 cask "font-fira-code-nerd-font"   # Ghostty font (no tap needed since Homebrew 4.3)
 
 # ─── NOT in Homebrew core — install with their own scripts (as on Linux) ──────
