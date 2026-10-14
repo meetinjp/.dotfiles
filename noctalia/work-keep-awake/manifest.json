@@ -1,0 +1,8 @@
+{
+  "id": "work-keep-awake",
+  "name": "Active Codex sleep protection",
+  "version": "1.0.0",
+  "author": "Local dotfiles",
+  "description": "Pause automatic suspend during live Codex requests; preserve screen-off and locking.",
+  "entryPoints": { "main": "Main.qml" }
+}

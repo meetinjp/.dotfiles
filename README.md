@@ -81,6 +81,30 @@ These settings apply on both battery and AC power. Noctalia watches the file
 and reloads changes without restarting the shell; unrelated settings are
 preserved. Rerunning `noctalia/apply.sh` restores these managed values.
 
+Active **Codex** requests (including parallel agents) automatically prevent sleep
+through `work-keep-awake.service`. It checks live Codex rollout event metadata
+every five seconds; an open idle session, editor, build or background server does
+not count. Completion, interruption or process exit releases the protection.
+Screen-off and locking retain the timers above. A local Noctalia plugin pauses
+only its suspend monitor and recreates it when work ends, allowing automatic
+suspend again without requiring keyboard input. The manual Keep Awake control
+remains independent.
+
+Inspect with `work-keep-awake --status` or
+`qs -c noctalia-shell ipc call workKeepAwake status`. Disable automatic protection
+with `systemctl --user disable --now work-keep-awake.service` (the plugin sees the
+stopped observer and restores suspend within five seconds). The sleep inhibitor
+also blocks ordinary manual suspend while a request is running; stop the service
+first if you intend to suspend anyway. This Linux integration was verified with
+Codex 0.162.1 and the installed Noctalia shell. It observes `task_started`,
+`task_complete` and abort events in files held open by a live Codex process;
+it does not record prompts or transcripts. Other AI clients are not covered.
+The plugin uses Noctalia's internal suspend-monitor API, so verify its status
+and run `python3 -m unittest discover -s tests -v` after shell/Codex upgrades.
+If installed over SSH without a user systemd manager, rerun `install.sh` after
+desktop login to enable the service.
+On an already-running desktop, reload Noctalia once after first installation.
+
 For long reading sessions, presentations, or unattended builds, toggle
 Noctalia's **Keep Awake** control, or enable it for two hours with:
 

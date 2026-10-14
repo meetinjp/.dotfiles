@@ -1,0 +1,15 @@
+[Unit]
+Description=Prevent sleep during active Codex requests
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/work-keep-awake --daemon
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical-session.target

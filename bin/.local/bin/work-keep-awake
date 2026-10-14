@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""Block sleep during live Codex turns."""
+
+import argparse
+import fcntl
+from datetime import datetime
+import json
+import os
+from pathlib import Path
+import signal
+import subprocess
+import threading
+import time
+
+
+class Rollout:
+    def __init__(self, identity, writer_started):
+        self.identity = identity
+        self.writer_started = writer_started
+        self.offset = 0
+        self.turn = None
+
+    def update(self, path):
+        if path.stat().st_size < self.offset:
+            self.offset = 0
+            self.turn = None
+        with path.open('rb') as stream:
+            stream.seek(self.offset)
+            while True:
+                line = stream.readline()
+                if not line or not line.endswith(b'\n'):
+                    break
+                self.offset = stream.tell()
+                if b'event_msg' not in line:
+                    continue
+                try:
+                    event = json.loads(line)
+                    if event.get('type') != 'event_msg':
+                        continue
+                    payload = event.get('payload', {})
+                    kind = payload.get('type')
+                    turn = payload.get('turn_id', '')
+                    if kind == 'task_started':
+                        started = datetime.fromisoformat(event['timestamp'].replace('Z', '+00:00')).timestamp()
+                        # A crashed turn from a previous writer cannot inhibit sleep.
+                        self.turn = turn if started >= self.writer_started - 1 else None
+                    elif kind in {'task_complete', 'turn_aborted', 'task_aborted'}:
+                        if self.turn == turn:
+                            self.turn = None
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    continue
+        return self.turn is not None
+
+
+class Detector:
+    def __init__(self, proc_root=Path('/proc')):
+        self.proc_root = proc_root
+        self.rollouts = {}
+
+    def inspect(self):
+        ticks = os.sysconf('SC_CLK_TCK')
+        uptime = time.clock_gettime(time.CLOCK_BOOTTIME)
+        boot_epoch = time.time() - uptime
+        live_logs = {}
+        for directory in self.proc_root.iterdir():
+            if not directory.name.isdigit():
+                continue
+            try:
+                if directory.stat().st_uid != os.getuid():
+                    continue
+                name = (directory / 'comm').read_text().strip()
+                # comm may contain spaces/parentheses; fields begin after the last ')'.
+                fields = (directory / 'stat').read_text().rsplit(')', 1)[1].split()
+                started = int(fields[19]) / ticks
+                if name != 'codex':
+                    continue
+                for fd in (directory / 'fd').iterdir():
+                    try:
+                        path = Path(os.readlink(fd))
+                        if 'sessions' not in path.parts or not path.name.startswith('rollout-') or path.suffix != '.jsonl':
+                            continue
+                        stat = path.stat()
+                        identity = (stat.st_dev, stat.st_ino)
+                        born = boot_epoch + started
+                        if path not in live_logs or born < live_logs[path][1]:
+                            live_logs[path] = (identity, born)
+                    except OSError:
+                        continue
+            except (OSError, ValueError, IndexError):
+                continue
+
+        active_turns = 0
+        for path, (identity, born) in live_logs.items():
+            cursor = self.rollouts.get(path)
+            if cursor is None or cursor.identity != identity or abs(cursor.writer_started - born) > 2:
+                cursor = self.rollouts[path] = Rollout(identity, born)
+            try:
+                active_turns += cursor.update(path)
+            except OSError:
+                continue
+        self.rollouts = {path: cursor for path, cursor in self.rollouts.items() if path in live_logs}
+
+        return {'activeCodexTurns': active_turns}
+
+
+class Inhibitor:
+    def __init__(self):
+        self.process = None
+
+    def running(self):
+        return self.process is not None and self.process.poll() is None
+
+    def set_busy(self, busy):
+        if busy and not self.running():
+            self.process = subprocess.Popen([
+                'systemd-inhibit', '--what=sleep', '--mode=block',
+                '--who=Active Codex', '--why=Codex is processing a request',
+                'sleep', 'infinity'], start_new_session=True)
+        elif not busy and self.process is not None:
+            self.close()
+
+    def close(self):
+        process, self.process = self.process, None
+        if process is None or process.poll() is not None:
+            return
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+            process.wait(timeout=3)
+        except ProcessLookupError:
+            process.wait()
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+
+
+def status_path(state_dir):
+    return state_dir / 'status.json'
+
+
+def read_status(state_dir):
+    try:
+        data = json.loads(status_path(state_dir).read_text())
+        os.kill(data['pid'], 0)
+        if time.time() - data['updatedAt'] > 15:
+            raise ValueError('stale status')
+        return data
+    except (OSError, ValueError, KeyError, TypeError):
+        return {'busy': False, 'activeCodexTurns': 0, 'inhibitorRunning': False}
+
+
+def run_daemon(args):
+    args.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # One observer per user; an accidental second invocation cannot fight it.
+    with (args.state_dir / 'daemon.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        detector, inhibitor = Detector(args.proc_root), Inhibitor()
+        stop = threading.Event()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            signal.signal(sig, lambda *_: stop.set())
+        try:
+            while not stop.is_set():
+                counts = detector.inspect()
+                busy = counts['activeCodexTurns'] > 0
+                inhibitor.set_busy(busy)
+                data = dict(counts, busy=busy, inhibitorRunning=inhibitor.running(),
+                            pid=os.getpid(), updatedAt=time.time())
+                temporary = args.state_dir / 'status.tmp'
+                temporary.write_text(json.dumps(data) + '\n')
+                temporary.replace(status_path(args.state_dir))
+                stop.wait(args.interval)
+        finally:
+            inhibitor.close()
+            status_path(args.state_dir).unlink(missing_ok=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument('--inspect', action='store_true', help='detect active Codex turns once')
+    modes.add_argument('--daemon', action='store_true', help='automatically hold/release a sleep inhibitor')
+    modes.add_argument('--status', action='store_true', help='print current observer status')
+    parser.add_argument('--proc-root', type=Path, default=Path('/proc'), help=argparse.SUPPRESS)
+    parser.add_argument('--state-dir', type=Path,
+                        default=Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')) / 'work-keep-awake',
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--interval', type=float, default=5, help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    if args.interval <= 0 or args.interval > 5:
+        parser.error('interval must be between 0 and 5 seconds')
+    if args.daemon:
+        run_daemon(args)
+    else:
+        print(json.dumps(read_status(args.state_dir) if args.status else Detector(args.proc_root).inspect()))
+
+
+if __name__ == '__main__':
+    main()

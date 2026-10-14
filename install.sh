@@ -205,6 +205,14 @@ fi
 # Noctalia colorscheme and idle settings — patched rather than stowed since
 # Noctalia live-mutates settings.json. Linux-only (no-op on macOS).
 "$DOTFILES/noctalia/apply.sh"
+"$DOTFILES/noctalia/apply-work-keep-awake.sh"
+if [[ "$(uname -s)" == Linux ]] && command -v systemctl &>/dev/null; then
+	if systemctl --user show-environment &>/dev/null; then
+		systemctl --user enable --now work-keep-awake.service
+	else
+		echo "  User systemd manager unavailable; rerun install.sh after login to enable work-keep-awake."
+	fi
+fi
 
 # Zen Browser user.js — Zen's profile dir is per-install-hashed. Resolve the
 # active profile from installs.ini/profiles.ini and symlink the repo's user.js
