@@ -62,6 +62,10 @@ elif is_windows; then
 	fi
 fi
 
+# Shared Codex/Claude skills and startup defaults work without stow or either
+# agent CLI. Keep this before the Windows early exit too.
+python3 "$DOTFILES/agent-skills/apply.py"
+
 # Windows has no stow (GNU stow isn't packaged for it, and most COMMON_DIRS
 # packages target POSIX tools that don't apply here). The one thing every
 # machine needs regardless of OS is the Claude Code skill set, so link that
@@ -88,7 +92,7 @@ if is_windows; then
 	shopt -u nullglob
 	# claude/apply.sh is skipped here: its Python helper imports fcntl, which
 	# doesn't exist on native Windows Python, so it hard-crashes on this OS.
-	echo "Dotfiles installed successfully! (Windows: skills + gh only — see COMMON_DIRS in this script for what else exists)"
+	echo "Dotfiles installed successfully! (Windows: shared Codex/Claude skills, caveman defaults + gh — see COMMON_DIRS in this script for what else exists)"
 	exit 0
 fi
 

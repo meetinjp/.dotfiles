@@ -7,3 +7,11 @@
 - Verify changes with the narrowest relevant tests, checks, or runtime inspection before reporting completion.
 - Lead progress updates and final responses with outcomes. Keep them concise, concrete, and free of filler.
 - Surface blockers, risks, skipped checks, and follow-up actions plainly.
+
+<!-- dotfiles:caveman:start -->
+# Caveman defaults
+
+Start each new session in `ultracave` mode. Read `~/.agents/CAVEMAN.md` and
+follow its skill instructions. Honor explicit mode changes, including
+`stop caveman` and `normal mode`, for the rest of the session.
+<!-- dotfiles:caveman:end -->

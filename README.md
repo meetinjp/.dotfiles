@@ -46,6 +46,7 @@ browser is Zen (`zen-browser`), set both via xdg-mime and the `$BROWSER` env var
 | Dir          | Purpose                                                          | How it lands            |
 | ------------ | ---------------------------------------------------------------- | ----------------------- |
 | `.agents/`   | Codex plugin marketplace metadata                               | discovered by Codex     |
+| `agent-skills/` | Shared Caveman family for Codex and Claude Code; global ultracave defaults | run by `install.sh` |
 | `bin/`       | `~/.local/bin/` scripts (`niri-screenshot`)                      | stowed                  |
 | `claude/`    | Retained Claude Code compatibility config                        | run by `install.sh`     |
 | `claude-skills/` | Global Claude Code skills (`~/.claude/skills/`) — no-coauthor, conventional-commits, systematic-debugging, test-driven-development, verification-before-completion | stowed |
@@ -128,7 +129,7 @@ Codex's live auth, sessions, project trust, and other machine-local state:
 - Vim composer mode, full-screen TUI, useful footer fields, and unfocused
   completion/approval notifications.
 - A global `~/.codex/AGENTS.md` symlink with concise personal working
-  agreements.
+  agreements and ultracave startup guidance.
 - OpenAI's official documentation MCP server.
 - The native `caveman` Codex plugin, installed from this repo's dotfiles
   marketplace entry (which tracks the upstream plugin subdirectory).
@@ -137,6 +138,14 @@ Codex's live auth, sessions, project trust, and other machine-local state:
 The older Claude Code patcher still runs for compatibility; Codex is the
 primary managed agent. No Claude auth, history, cache, or live state is copied
 into Codex.
+
+The [shared agent skill installer](agent-skills/README.md) also links all 22
+upstream Caveman skills into `~/.agents/skills/` for Codex and
+`~/.claude/skills/` for Claude Code, including `caveman-review`, `caveman-commit`,
+`caveman-help`, `cavecrew`, `ultracave`, and `megacave`. Both agents start new
+sessions in ultracave mode. Say `normal mode` or `stop caveman` to opt out for
+the session. Run `python3 ~/.dotfiles/agent-skills/apply.py` to apply only these
+skills and defaults without running the full system installer.
 
 ## Install — TUXEDO OS (Ubuntu, primary)
 
