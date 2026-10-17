@@ -11,8 +11,8 @@ font-feature = -calt
 font-feature = -clig
 font-feature = -liga
 
-# ─── Theme — Gruvbox Dark Hard ───────────────────────────────────────────────
-theme = Gruvbox Dark Hard
+# ─── Theme — Gruvbox Material Hard ───────────────────────────────────────────
+theme = Gruvbox Material Hard
 
 # ─── Window ──────────────────────────────────────────────────────────────────
 # Niri sets prefer-no-csd, so we tell Ghostty to use server-side decorations.

@@ -52,11 +52,11 @@ browser is Zen (`zen-browser`), set both via xdg-mime and the `$BROWSER` env var
 | `claude-skills/` | Global Claude Code skills (`~/.claude/skills/`) — no-coauthor, conventional-commits, systematic-debugging, test-driven-development, verification-before-completion | stowed |
 | `codex/`     | Codex defaults, global guidance, docs MCP + plugin installer     | run by `install.sh`     |
 | `debian/`    | TUXEDO OS (Ubuntu) provisioning — apt + PPAs + scripts/cargo     | run by `install.sh`     |
-| `ghostty/`   | GPU-accelerated terminal (Gruvbox Dark Hard, zsh integration)    | stowed                  |
+| `ghostty/`   | GPU-accelerated terminal (Gruvbox Material Hard, zsh integration) | stowed                  |
 | `git/`       | gitconfig templates (identity injected at setup time)            | rendered by `setup.sh`  |
 | `kanshi/`    | auto-switch monitor profiles (laptop / docked)                   | stowed                  |
 | `niri/`      | Wayland compositor — scrollable tiling                           | stowed                  |
-| `noctalia/`  | Noctalia settings patcher (Gruvbox + conservative idle timeouts) | run by `install.sh`     |
+| `noctalia/`  | Noctalia settings patcher (Gruvbox Material Hard, no animations, conservative idle timeouts) | run by `install.sh` |
 | `nvim/`      | submodule → [meetinjp/nvim](https://github.com/meetinjp/nvim)    | stowed                  |
 | `prettier/`  | global prettier config                                           | stowed                  |
 | `ripgrep/`   | `.ripgreprc` (smart-case, hidden, vcs/vendor ignores)            | stowed                  |
@@ -72,8 +72,12 @@ Bar / launcher / notifications / lock / polkit / wallpaper are all provided by
 **Noctalia** (the `cachyos-niri-noctalia` package). Noctalia is configured at
 runtime via its own settings UI and live-mutates
 `~/.config/noctalia/settings.json`, so it isn't stowed. `install.sh` runs
-`noctalia/apply.sh` to pin the **Gruvbox** colorscheme and enable conservative
-idle handling (a flock'd JSON merge, same pattern as `claude/apply.sh`).
+`noctalia/apply.sh` to install and pin the community **Gruvbox Material Hard**
+colorscheme, disable Noctalia animations, and enable conservative idle handling
+(a flock'd JSON merge, same pattern as `claude/apply.sh`). The palette is bundled
+from [Noctalia's community palettes](https://github.com/noctalia-dev/community-palettes/tree/main/Gruvbox%20Material%20Hard).
+Ghostty uses the matching terminal palette from the same source. Both use a
+`#1d2021` background and `#d4be98` foreground.
 After no keyboard or mouse activity, displays turn off at **20 minutes**, the
 session locks at **25 minutes**, and the laptop suspends at **60 minutes**.
 Each stage has a **10-second** fade that input can cancel. Timeouts count from

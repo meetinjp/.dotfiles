@@ -9,18 +9,26 @@ set -euo pipefail
 
 [[ "$(uname -s)" == Darwin ]] && { echo "macOS — no Noctalia, skipping."; exit 0; }
 
-python3 - <<'PY'
+DOTFILES_NOCTALIA="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 - "$DOTFILES_NOCTALIA" <<'PY'
 import fcntl
 import json
 import os
 import sys
 from pathlib import Path
 
+config = Path.home() / ".config" / "noctalia"
+scheme_name = "Gruvbox Material Hard"
+scheme_source = Path(sys.argv[1]) / "colorschemes" / scheme_name / f"{scheme_name}.json"
+scheme_path = config / "colorschemes" / scheme_name / f"{scheme_name}.json"
+scheme_raw = scheme_source.read_bytes()
+scheme = json.loads(scheme_raw)
+
 # Only the keys we own. Noctalia fills the remaining settings with defaults.
 # Timeouts are seconds since the last input, not delays between stages.
 DESIRED = {
     "colorSchemes": {
-        "predefinedScheme": "Gruvbox",
+        "predefinedScheme": str(scheme_path),
         "useWallpaperColors": False,
     },
     "idle": {
@@ -31,11 +39,12 @@ DESIRED = {
         "fadeDuration": 10,
     },
     "general": {
+        "animationDisabled": True,
         "lockOnSuspend": True,
     },
 }
 
-path = Path.home() / ".config" / "noctalia" / "settings.json"
+path = config / "settings.json"
 path.parent.mkdir(parents=True, exist_ok=True)
 
 # Exclusive flock across read-modify-write so a concurrent Noctalia write can't
@@ -77,10 +86,16 @@ with path.open("r+", encoding="utf-8") as f:
     else:
         print(f"{path}: colorscheme and idle settings already applied")
     # flock released when f closes.
-PY
 
 # If Noctalia is already running, apply the scheme live too (no relaunch needed).
-# No-op on a fresh/headless box where the shell isn't up yet.
-if command -v qs >/dev/null 2>&1; then
-    qs -c noctalia-shell ipc call colorScheme set Gruvbox >/dev/null 2>&1 || true
-fi
+# Install the palette for future loads; the colors.json watcher updates the UI now.
+scheme_path.parent.mkdir(parents=True, exist_ok=True)
+if not scheme_path.exists() or scheme_path.read_bytes() != scheme_raw:
+    scheme_path.write_bytes(scheme_raw)
+variant = scheme["dark" if data["colorSchemes"].get("darkMode", True) else "light"]
+colors = {key: value for key, value in variant.items() if key.startswith("m")}
+colors_path = config / "colors.json"
+colors_raw = json.dumps(colors, indent=2) + "\n"
+if not colors_path.exists() or colors_path.read_text() != colors_raw:
+    colors_path.write_text(colors_raw)
+PY
