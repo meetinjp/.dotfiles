@@ -1,41 +1,138 @@
 #!/usr/bin/env bash
-# ---------------------------------------------------------------------------
-# Debian/Ubuntu (TUXEDO OS) package provisioning — the apt analog of macOS's
-# `brew bundle`. Called by install.sh when running on a Debian-family distro.
-#
-# TUXEDO OS = Ubuntu 24.04 LTS + KDE Plasma + SDDM. The niri/Noctalia/Ghostty/
-# Zen stack is Arch/AUR-native and mostly NOT in Ubuntu's apt repos, so this
-# installs it via PPAs / official scripts / cargo / tarballs.
-#
-# NOT handled here (TUXEDO OS ships them natively — do NOT reinstall):
-#   tuxedo-drivers, Tuxedo Control Center (tccd/tomte), the TUXEDO kernel, fan
-#   control, keyboard backlight, battery charge limit, 2.5G ethernet.
-#
-# ⚠️  UNTESTED on real hardware as written — authored from a verified research
-# spec but never run on Tuxedo OS. Items marked [LIVE] need verification on the
-# actual box (PPA resolution, Qt floor for Noctalia, exact pin versions).
-#
-# Resilient by design: NOT `set -e` — one failed optional install logs a
-# warning and the rest continues. Idempotent — every step skips when its
-# target already exists.
-# ---------------------------------------------------------------------------
+# Ubuntu desktop and development tools. Run explicitly after reviewing the
+# package list; config linking does not need this script. Hardware drivers,
+# the display manager, and power-management policy stay with the installed OS.
+# Optional tools log warnings and continue; desktop prerequisites fail before
+# package or system changes. Use --check for a read-only compatibility check.
 set -uo pipefail
 
-# ── Point-in-time version pins — bump to current at run time ────────────────
 GO_VER="${GO_VER:-1.26.2}"                 # https://go.dev/dl/
 NVM_TAG="${NVM_TAG:-v0.40.5}"              # https://github.com/nvm-sh/nvm/tags
-NOCTALIA_QS_TAG="${NOCTALIA_QS_TAG:-}"     # pin a tag from noctalia-dev/noctalia-qs (empty = latest tag)
-NIRI_TAG="${NIRI_TAG:-v26.04}"             # https://github.com/YaLTeR/niri/tags (built from source — no apt pkg on noble)
+NIRI_TAG="${NIRI_TAG:-v26.04}"             # https://github.com/YaLTeR/niri/tags
+# Keep the Qt/QML shell compatible with this repo's Noctalia plugin and IPC.
+# The newer native Noctalia releases use a different configuration contract.
+NOCTALIA_QS_TAG="${NOCTALIA_QS_TAG:-v0.0.12}"
+NOCTALIA_SHELL_TAG="${NOCTALIA_SHELL_TAG:-v4.7.7}"
 
 log()  { printf '  \033[1m%s\033[0m\n' "$*"; }
 warn() { printf '  \033[33m! %s\033[0m\n' "$*" >&2; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
-if [[ "$(uname -s)" == Darwin ]] || ! have apt-get; then
-	echo "debian/provision.sh: not a Debian-family system — skipping."
-	exit 0
-fi
+is_ubuntu() {
+	[[ "$(uname -s)" == Linux && -r /etc/os-release ]] || return 1
+	local ID='' ID_LIKE=''
+	# shellcheck disable=SC1091
+	. /etc/os-release
+	[[ "$ID" == ubuntu || " $ID_LIKE " == *" ubuntu "* ]]
+}
 
+noctalia_engine_ready() {
+	have qs && [[ "$(qs --version 2>/dev/null)" == noctalia-qs[[:space:]]* ]]
+}
+
+check_noctalia_requirements() {
+	if have qs; then
+		if noctalia_engine_ready; then
+			log "Noctalia engine: $(qs --version)"
+			return 0
+		fi
+		warn "The existing qs is not noctalia-qs. Select the compatible engine on PATH; no binary was replaced."
+		return 1
+	fi
+	local qtver=''
+	if have qmake6; then
+		qtver="$(qmake6 --version 2>/dev/null | sed -n 's/.*Qt version \([0-9][0-9.]*\).*/\1/p' | head -1)"
+	elif have pkg-config; then
+		qtver="$(pkg-config --modversion Qt6Core 2>/dev/null || true)"
+	fi
+	if [[ -z "$qtver" ]] && have apt-cache; then
+		qtver="$(LC_ALL=C apt-cache policy qt6-base-dev 2>/dev/null | awk '/Candidate:/ {print $2; exit}')"
+		qtver="${qtver#*:}"
+	fi
+	if [[ ! "$qtver" =~ ^[0-9]+\.[0-9]+ ]] || ! dpkg --compare-versions "$qtver" ge 6.6; then
+		warn "Noctalia's Qt/QML engine requires Qt >= 6.6; found ${qtver:-no installed or available Qt}."
+		warn "Stock Ubuntu 24.04 Qt is too old. Provide compatible Qt packages or an existing noctalia-qs before provisioning."
+		return 1
+	fi
+	log "Noctalia build dependency: Qt $qtver (minimum 6.6)."
+}
+
+install_noctalia_shell() {
+	local root="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+	local target="$root/noctalia-shell" stage backup=''
+	if [[ -s "$target/shell.qml" ]]; then
+		log "Noctalia shell already installed."
+		return 0
+	fi
+	mkdir -p "$root" || return 1
+	stage="$(mktemp -d "$root/.noctalia-shell.XXXXXXXX")" || return 1
+	mkdir "$stage/shell" || { rm -rf "$stage"; return 1; }
+	if ! curl --fail --show-error --location \
+		"https://github.com/noctalia-dev/noctalia/archive/refs/tags/${NOCTALIA_SHELL_TAG}.tar.gz" \
+		-o "$stage/source.tar.gz" \
+		|| ! tar -xzf "$stage/source.tar.gz" --strip-components=1 -C "$stage/shell" \
+		|| [[ ! -s "$stage/shell/shell.qml" ]]; then
+		warn "Noctalia shell download is incomplete or incompatible; existing files were preserved. Rerun to retry."
+		rm -rf "$stage"
+		return 1
+	fi
+	# An incomplete earlier installation may contain user files; preserve it.
+	if [[ -e "$target" || -L "$target" ]]; then
+		backup="$target.incomplete.$(date +%s).$$"
+		mv "$target" "$backup" || { rm -rf "$stage"; return 1; }
+	fi
+	if ! mv "$stage/shell" "$target"; then
+		[[ -z "$backup" ]] || mv "$backup" "$target"
+		rm -rf "$stage"
+		return 1
+	fi
+	rm -rf "$stage"
+	log "Installed Noctalia shell $NOCTALIA_SHELL_TAG."
+	[[ -z "$backup" ]] || log "Preserved incomplete installation at $backup."
+}
+
+install_noctalia() {
+	check_noctalia_requirements || return 1
+	if ! noctalia_engine_ready; then
+		local stage
+		stage="$(mktemp -d)" || return 1
+		log "Building noctalia-qs $NOCTALIA_QS_TAG."
+		if ! git clone --depth 1 --branch "$NOCTALIA_QS_TAG" \
+			https://github.com/noctalia-dev/noctalia-qs "$stage/noctalia-qs" \
+			|| ! ( cd "$stage/noctalia-qs" \
+				&& cmake -GNinja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+					-DCMAKE_INSTALL_PREFIX=/usr/local -DDISTRIBUTOR=dotfiles \
+				&& cmake --build build \
+				&& sudo cmake --install build ); then
+			warn "noctalia-qs build failed."
+			rm -rf "$stage"
+			return 1
+		fi
+		rm -rf "$stage"
+		noctalia_engine_ready || { warn "Installed noctalia-qs is not available on PATH."; return 1; }
+	fi
+	install_noctalia_shell
+}
+
+# Sourcing exposes the compatibility and installer functions without provisioning.
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+	return 0
+fi
+case "${1:-}" in
+	--help|-h)
+		echo 'Usage: ubuntu/provision.sh [--check]'
+		echo 'Install Ubuntu desktop/development tools, or only check compatibility.'
+		exit 0 ;;
+	''|--check) ;;
+	*) echo "Unknown argument: $1" >&2; exit 2 ;;
+esac
+[[ $# -le 1 ]] || { echo 'Expected at most one argument.' >&2; exit 2; }
+if ! is_ubuntu || ! have apt-get; then
+	echo 'Ubuntu or an Ubuntu-derived distribution is required.' >&2
+	exit 1
+fi
+check_noctalia_requirements || exit 1
+[[ "${1:-}" != --check ]] || exit 0
 ARCH_DEB="$(dpkg --print-architecture)"
 
 # ── 1. apt base + desktop + CLI ─────────────────────────────────────────────
@@ -56,7 +153,7 @@ APT_PKGS=(
 	kanshi wlsunset wl-clipboard cliphist grim slurp brightnessctl playerctl
 	pamixer pavucontrol xwayland
 	xdg-desktop-portal-gnome xdg-desktop-portal-gtk xdg-utils gnome-keyring
-	libnotify-bin power-profiles-daemon fwupd udisks2
+	libnotify-bin fwupd udisks2
 	zsh zsh-autosuggestions zsh-syntax-highlighting tmux ripgrep eza fd-find fzf
 	gnupg pinentry-curses gh python3 python3-venv python3-pip
 	fonts-firacode fonts-noto-core fonts-noto-color-emoji fonts-noto-cjk locales
@@ -70,7 +167,7 @@ log "apt: updating + installing base/desktop/CLI packages…"
 sudo apt-get update -y || warn "apt update failed"
 sudo apt-get install -y "${APT_PKGS[@]}" || warn "some apt packages failed (continuing)"
 
-# fd ships as `fdfind` on Debian — add a `fd` shim on PATH (nvim/yazi expect fd).
+# fd ships as `fdfind` on Ubuntu — add a `fd` shim on PATH (nvim/yazi expect fd).
 if have fdfind && ! have fd; then
 	mkdir -p "$HOME/.local/bin"
 	ln -sfn "$(command -v fdfind)" "$HOME/.local/bin/fd"
@@ -202,12 +299,10 @@ if ! have xwayland-satellite; then
 fi
 
 # ── 3b. niri (built from source) ────────────────────────────────────────────
-# No usable niri apt package exists on noble (24.04) — niri only entered Ubuntu
-# in 24.10. (The original spec pulled it from ppa:avengemedia/danklinux, which
-# actually ships DankMaterialShell's `dgop`, not niri, so niri never installed.)
+# Build the pinned niri release for a consistent session and portal setup.
 # Build the pinned release from source — every C dep is in APT_PKGS above — and
 # install the binary + SDDM session + portal config + user units by hand. niri
-# then appears as a selectable "Niri" session at the SDDM screen (KDE stays).
+# then appears as a selectable "Niri" session in the existing display manager.
 build_niri() {
 	have niri && { log "niri already installed."; return; }
 	have cargo || { warn "cargo missing — cannot build niri"; return; }
@@ -222,7 +317,7 @@ build_niri() {
 		sudo install -Dm644 "$n/resources/niri-portals.conf"    /usr/share/xdg-desktop-portal/niri-portals.conf
 		sudo install -Dm644 "$n/resources/niri.service"         /usr/lib/systemd/user/niri.service
 		sudo install -Dm644 "$n/resources/niri-shutdown.target" /usr/lib/systemd/user/niri-shutdown.target
-		log "niri ${NIRI_TAG} installed (pick 'Niri' at the SDDM login screen)."
+		log "niri ${NIRI_TAG} installed (pick 'Niri' in your display manager)."
 	else
 		warn "niri build failed — see output above."
 	fi
@@ -281,15 +376,14 @@ EOF
 	fi
 fi
 
-# ── 8. Zen browser (per-user tarball; profile lives at ~/.zen/, see install.sh) ─
+# ── 8. Zen browser (per-user installation) ─────────────────────────────────
 if [[ ! -x "$HOME/.local/bin/zen" ]]; then
 	log "installing Zen browser (per-user)…"
 	curl -fsSL https://github.com/zen-browser/updates-server/raw/refs/heads/main/install.sh | bash \
 		|| warn "Zen install failed"
 fi
 # The niri config spawns `zen-browser`, but the per-user tarball installs the
-# binary as `zen`. Alias it so the startup spawn resolves the same as on Arch
-# (where the package binary is `zen-browser`).
+# binary as `zen`. Provide the command name used by the desktop config.
 if [[ -x "$HOME/.local/bin/zen" && ! -e "$HOME/.local/bin/zen-browser" ]]; then
 	ln -sfn zen "$HOME/.local/bin/zen-browser"
 	log "linked zen-browser → zen"
@@ -310,8 +404,7 @@ if [[ -f "$ZEN_DESKTOP" ]]; then
 	have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
 	# Make Zen the actual default browser. xdg-settings sets the desktop default,
 	# but the per-scheme handlers (http/https/text-html) are independent and on
-	# Tuxedo OS stay pointed at Firefox unless set explicitly — which is why nvim's
-	# `gx` / xdg-open kept opening Firefox. Set both.
+	# existing desktops may retain a different browser unless set explicitly.
 	have xdg-settings && xdg-settings set default-web-browser zen.desktop 2>/dev/null || true
 	have xdg-mime && xdg-mime default zen.desktop x-scheme-handler/http x-scheme-handler/https text/html 2>/dev/null || true
 	log "patched zen.desktop + set Zen as default browser"
@@ -339,42 +432,7 @@ have uv  || { log "installing uv…";  curl -LsSf https://astral.sh/uv/install.s
 [[ -s "$HOME/.nvm/nvm.sh" ]] || { log "installing nvm ${NVM_TAG}…"; curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_TAG}/install.sh" | bash || warn "nvm failed"; }
 [[ -x "$HOME/.bun/bin/bun" ]] || { log "installing bun…"; curl -fsSL https://bun.com/install | bash || warn "bun failed"; }
 
-# ── 10. Noctalia (Quickshell-based niri shell) — GATED on Qt >= 6.6 ─────────
-# Upstream quickshell won't run noctalia-shell since v4.6.0; use the fork
-# noctalia-qs (binary `qs`). It needs Qt >= 6.6. Stock noble = Qt 6.4 → SKIP
-# with a warning; Tuxedo OS backports Qt >= 6.7 → builds. [LIVE: confirm on box]
-install_noctalia() {
-	have qs && { log "noctalia-qs (qs) already installed."; return; }
-	local qtver qtmajor qtminor
-	qtver="$(qmake6 --version 2>/dev/null | grep -oE 'Qt version [0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+' | head -1)"
-	if [[ -z "$qtver" ]]; then warn "qmake6 not found — skipping Noctalia (install qt6-base-dev / use Tuxedo OS)."; return; fi
-	qtmajor="${qtver%%.*}"; qtminor="${qtver#*.}"
-	if (( qtmajor < 6 || (qtmajor == 6 && qtminor < 6) )); then
-		warn "Qt $qtver < 6.6 — skipping Noctalia (needs >=6.6; Tuxedo OS backports it). Bar/launcher won't run until then."
-		return
-	fi
-	log "building noctalia-qs (Qt $qtver ok)… [LIVE: pin NOCTALIA_QS_TAG]"
-	local d branch_arg=(); d="$(mktemp -d)"
-	[[ -n "$NOCTALIA_QS_TAG" ]] && branch_arg=(--branch "$NOCTALIA_QS_TAG")
-	if git clone --depth 1 "${branch_arg[@]}" \
-		https://github.com/noctalia-dev/noctalia-qs "$d/noctalia-qs"; then
-		( cd "$d/noctalia-qs" \
-			&& cmake -GNinja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-				-DCMAKE_INSTALL_PREFIX=/usr/local -DDISTRIBUTOR="meetinjp/.dotfiles" \
-			&& cmake --build build \
-			&& sudo cmake --install build ) || warn "noctalia-qs build failed"
-	else
-		warn "noctalia-qs clone failed"
-	fi
-	rm -rf "$d"
-	# Shell config (runs inside the niri session via `qs -c noctalia-shell`).
-	if [[ ! -d "$HOME/.config/quickshell/noctalia-shell" ]]; then
-		mkdir -p "$HOME/.config/quickshell/noctalia-shell"
-		curl -fsSL https://github.com/noctalia-dev/noctalia/releases/latest/download/noctalia-latest.tar.gz \
-			| tar -xz --strip-components=1 -C "$HOME/.config/quickshell/noctalia-shell" \
-			|| warn "noctalia-shell fetch failed"
-	fi
-}
-install_noctalia
+# ── 10. Noctalia (engine and shell installed independently) ────────────────
+install_noctalia || exit 1
 
-echo "Debian provisioning done (review any '!' warnings above)."
+echo "Ubuntu provisioning done (review any '!' warnings above)."

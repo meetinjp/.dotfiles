@@ -1,6 +1,5 @@
 // niri — Wayland scrollable-tiling compositor.
-// TUXEDO InfinityBook Pro 14 (AMD Gen10): single AMD iGPU (Radeon 890M).
-// niri auto-selects the only DRM device — no render-device pinning needed.
+// Hardware and location preferences are kept in host.kdl.
 //
 // Shell: Noctalia (Quickshell). Provides bar + launcher + notifications +
 // lock + polkit + wallpaper + idle handling. Spawned via `qs -c noctalia-shell`.
@@ -12,80 +11,9 @@
 
 // ─── INPUT ───────────────────────────────────────────────────────────────────
 
-input {
-	mod-key "Super"
+include "host.kdl"
 
-    keyboard {
-        xkb {
-            layout "pl,gr"
-            // Caps Lock → Ctrl is handled OS-level by keyd, not here.
-			variant ",polytonic"
-        }
-        repeat-delay 400
-        repeat-rate 30
-    }
-
-    touchpad {
-        tap                              // tap-to-click (1/2/3-finger tap = L/R/M)
-        dwt                              // disable while typing
-        natural-scroll                   // macOS-style: two-finger up = content moves up
-        accel-speed 0.2
-        accel-profile "adaptive"
-        // button-areas: bottom-left physical press = L click,
-        //   bottom-right physical press = R click (Windows-style).
-        // Tap-to-click still gives you 2-finger-tap = R click as a bonus.
-        click-method "button-areas"
-    }
-
-    mouse {
-        accel-speed 0.0
-        accel-profile "flat"
-    }
-
-    warp-mouse-to-focus
-    // focus-follows-mouse deliberately off — keyboard-driven focus only.
-}
-
-// ─── OUTPUT ──────────────────────────────────────────────────────────────────
-// Two things write output state, at different moments:
-//   - the blocks below, applied at niri startup and on every config reload;
-//   - kanshi/.config/kanshi/config, applied on hotplug.
-// Neither overrides the other permanently — whichever ran last is what you
-// see. So the values must be kept identical in both files, or a setting
-// appears correct until you replug and then silently changes.
-
-// PER-HOST: output name (eDP-1 / eDP-2 / etc.), resolution, refresh, and
-// scale depend on the laptop panel. Confirm via `niri msg outputs` and
-// adjust below if needed. scale 1.75 = larger text + UI on the 2880x1800
-// panel; bump higher for chunkier, drop to 1.0 for native pixel-perfect.
-output "eDP-1" {
-    mode "2880x1800@120.000"
-    scale 1.75
-    transform "normal"
-    position x=0 y=0
-}
-
-// Dell SE2426HG. EDID-preferred mode is only 60 Hz, so the refresh rate must
-// be pinned explicitly or niri lands on 60.
-//
-// position x=1646 is derived from eDP-1 above: 2880/1.75 = 1645.71, rounded
-// up to 1646 logical px. It is NOT independent — change eDP-1's scale and
-// this must be recomputed, or the outputs overlap and niri discards the
-// position with only a WARN ("falling back to automatic placement").
-//
-// VRR is deliberately not configured. Forcing it on coincided with this
-// panel going blank on 2026-09-12 and removing it restored the picture, but
-// the cause was never confirmed — neither niri nor the kernel logged
-// anything — so treat always-on as suspect rather than proven broken. The
-// `on-demand=true` alternative never engaged at all: it requires a matching
-// `variable-refresh-rate` window rule, and nothing that runs here is a
-// variable-framerate 3D app. Re-add it if you install a game.
-output "HDMI-A-1" {
-    mode "1920x1080@240"
-    scale 1
-    transform "normal"
-    position x=1646 y=0
-}
+// Display modes and positions are managed by kanshi alone.
 
 // ─── LAYOUT ──────────────────────────────────────────────────────────────────
 
@@ -244,10 +172,6 @@ spawn-at-startup "sh" "-c" "systemctl --user import-environment WAYLAND_DISPLAY 
 spawn-at-startup "qs" "-c" "noctalia-shell"
 spawn-at-startup "kanshi"
 spawn-at-startup "xwayland-satellite"
-// wlsunset — gamma/temp shift by real sunrise/sunset. Replace the lat/long
-// below with your coordinates (e.g. -l 52.23 -L 21.01 for Warsaw); decimal
-// degrees, north + / south -, east + / west -. Defaults: 6500K day, 4000K night.
-spawn-at-startup "wlsunset" "-l" "52.23" "-L" "21.01"
 
 // Apps gated behind $NIRI_SKIP_APPS — unset = launch (default), set to
 // anything = skip. Useful for a clean debug session: `NIRI_SKIP_APPS=1 niri`.

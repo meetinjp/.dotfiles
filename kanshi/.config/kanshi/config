@@ -13,13 +13,13 @@ profile laptop {
 
 # Laptop + 1 external. Laptop on left, external (Dell SE2426HG) on right.
 #
-# These values MUST stay identical to the output blocks in
-# niri/.config/niri/config.kdl; see the OUTPUT section there for why.
+# This file is the sole owner of display modes and positions.
+# Niri does not duplicate these settings on configuration reload.
 #
 # The @240 is mandatory: the panel's EDID-preferred mode is 60 Hz, so an
 # unqualified `mode 1920x1080` silently drops it to 60.
 #
-# adaptive_sync off matches niri, which configures no VRR at all.
+# Adaptive sync is disabled for this monitor profile.
 profile docked {
     output eDP-1 mode 2880x1800@120 position 0,0 scale 1.75 adaptive_sync off
     output HDMI-A-1 mode 1920x1080@240 position 1646,0 scale 1 adaptive_sync off

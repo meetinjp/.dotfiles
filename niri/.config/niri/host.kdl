@@ -1,0 +1,39 @@
+// Host preferences. Review keyboard, pointing devices, and coordinates on a new machine.
+// Display modes and positions have one owner: ~/.config/kanshi/config.
+
+input {
+	mod-key "Super"
+
+    keyboard {
+        xkb {
+            layout "pl,gr"
+            // Caps Lock → Ctrl is handled OS-level by keyd, not here.
+			variant ",polytonic"
+        }
+        repeat-delay 400
+        repeat-rate 30
+    }
+
+    touchpad {
+        tap                              // tap-to-click (1/2/3-finger tap = L/R/M)
+        dwt                              // disable while typing
+        natural-scroll                   // macOS-style: two-finger up = content moves up
+        accel-speed 0.2
+        accel-profile "adaptive"
+        // button-areas: bottom-left physical press = L click,
+        //   bottom-right physical press = R click (Windows-style).
+        // Tap-to-click still gives you 2-finger-tap = R click as a bonus.
+        click-method "button-areas"
+    }
+
+    mouse {
+        accel-speed 0.0
+        accel-profile "flat"
+    }
+
+    warp-mouse-to-focus
+    // focus-follows-mouse deliberately off — keyboard-driven focus only.
+}
+
+// Sunset coordinates: latitude and longitude in decimal degrees.
+spawn-at-startup "wlsunset" "-l" "52.23" "-L" "21.01"

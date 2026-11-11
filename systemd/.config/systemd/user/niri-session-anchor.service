@@ -6,7 +6,7 @@ Description=Anchor graphical-session.target for the niri session
 # pulls the target up via Wants= + Before=, so user services declared
 # WantedBy=graphical-session.target come up. Teardown is automatic: the target
 # ships StopWhenUnneeded=yes, so once this anchor stops — at logout, when the
-# tty1 login session that exec'd niri ends — nothing Wants the target and it
+# graphical login session ends — nothing Wants the target and it
 # stops too. BindsTo= additionally binds the anchor's own lifetime to the
 # target, so the anchor also exits if the target is torn down first.
 Wants=graphical-session.target

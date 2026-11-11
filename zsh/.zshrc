@@ -1,6 +1,6 @@
 # zsh — bare config (no Oh-My-Zsh), starship prompt. Cross-platform: Linux
-# (CachyOS/pacman) and macOS (Homebrew). Plugins:
-#   Linux: sudo pacman -S starship zsh-autosuggestions zsh-syntax-highlighting
+# (Ubuntu) and macOS (Homebrew). Plugins:
+#   Linux: ./ubuntu/provision.sh
 #   macOS: brew install     starship zsh-autosuggestions zsh-syntax-highlighting
 
 # vi mode (zsh builtin)
@@ -28,7 +28,7 @@ autoload -Uz compinit && compinit
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-# Plugins (sourced directly; no framework). Candidate paths cover pacman
+# Plugins (sourced directly; no framework). Candidate paths cover distribution packages
 # (/usr/share/zsh/plugins) and Homebrew ($HOMEBREW_PREFIX/share, with
 # /opt/homebrew and /usr/local fallbacks for Apple Silicon / Intel). The
 # `[[ -r ]]` guard makes the per-OS-unused entries harmless. Order matters:
@@ -62,7 +62,7 @@ export GIT_EDITOR="nvim"
 # "open -a ..." value breaks tools that exec $BROWSER as a single argv).
 [[ "$OSTYPE" != darwin* ]] && export BROWSER="zen-browser"
 
-# Aliases. eza is the ls replacement (pacman/brew); guard so the shell stays
+# Aliases. eza is the ls replacement; guard so the shell stays
 # usable on a fresh box before `eza` is installed (e.g. new macOS pre-brew) —
 # bare `ls` must not turn into "command not found: eza".
 alias v="nvim ."
@@ -80,7 +80,7 @@ fi
 # PATH
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.cargo/bin"
-# Go — Debian/Ubuntu (Tuxedo OS) installs the official tarball to /usr/local/go;
+# Go — Ubuntu installs the official tarball to /usr/local/go;
 # `go install` drops binaries in ~/go/bin. Guarded so it's a no-op elsewhere.
 [[ -d /usr/local/go/bin ]] && export PATH="$PATH:/usr/local/go/bin"
 [[ -d "$HOME/go/bin" ]] && export PATH="$PATH:$HOME/go/bin"
