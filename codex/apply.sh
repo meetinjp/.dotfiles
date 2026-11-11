@@ -34,8 +34,8 @@ except ModuleNotFoundError:
 
 DESIRED = {
     None: {
-        "model": '"gpt-5.6-sol"',
-        "model_reasoning_effort": '"xhigh"',
+        # Model and reasoning choices belong to the host. Leave unset values
+        # to Codex's defaults and preserve selections made in the application.
         "personality": '"pragmatic"',
     },
     "tui": {
@@ -49,6 +49,9 @@ DESIRED = {
     "mcp_servers.openaiDeveloperDocs": {
         "url": '"https://developers.openai.com/mcp"',
     },
+    # Shared Caveman skills are installed from one pinned upstream source.
+    "plugins.caveman@dotfiles": {"enabled": "false"},
+    "plugins.caveman@caveman": {"enabled": "false"},
 }
 
 path = Path(os.environ["CODEX_DOTFILES_CONFIG_PATH"])
@@ -160,9 +163,7 @@ def scan_document(lines):
 
 
 def render_key_path(path):
-    if not all(BARE_KEY_RE.fullmatch(component) for component in path):
-        raise ValueError(f"managed TOML path contains a non-bare key: {path!r}")
-    return ".".join(path)
+    return ".".join(render_toml_key(component) for component in path)
 
 
 def render_toml_key(key):
@@ -340,39 +341,15 @@ with path.open("r+", encoding="utf-8") as config_file:
 PY
 unset CODEX_DOTFILES_CONFIG_PATH
 
-# Global guidance is static, so keep it as a visible dotfiles symlink. Preserve
-# a pre-existing real file as a timestamped backup rather than overwriting it.
+# Link the defaults on a new host. Existing personal guidance stays active;
+# agent-skills/apply.py merges the Caveman block into it independently.
 managed_agents="$DOTFILES/codex/AGENTS.md"
 global_agents="$CODEX_CONFIG_DIR/AGENTS.md"
 if [[ -L "$global_agents" && "$(readlink "$global_agents")" == "$managed_agents" ]]; then
 	echo "$global_agents: already linked"
+elif [[ -e "$global_agents" || -L "$global_agents" ]]; then
+	echo "$global_agents: existing personal guidance preserved"
 else
-	if [[ -e "$global_agents" || -L "$global_agents" ]]; then
-		backup="$global_agents.bak.$(date +%s)"
-		mv "$global_agents" "$backup"
-		echo "backed up $global_agents -> $backup"
-	fi
 	ln -s "$managed_agents" "$global_agents"
 	echo "linked $global_agents -> $managed_agents"
-fi
-
-# Tests can target a temporary config directory without touching the real Codex
-# plugin registry. Normal installs register this repo's marketplace and install
-# the native caveman bundle globally.
-if [[ -n "${CODEX_DOTFILES_TARGET_DIR:-}" || "${CODEX_APPLY_SKIP_PLUGINS:-0}" == 1 ]]; then
-	echo "Codex plugin setup skipped."
-elif ! command -v codex >/dev/null 2>&1; then
-	echo "codex CLI not on PATH — skipping caveman plugin install."
-elif ! codex plugin marketplace add "$DOTFILES" --json >/dev/null; then
-	echo "warning: failed to register dotfiles Codex marketplace." >&2
-elif codex plugin list --json | python3 -c '
-import json, sys
-data = json.load(sys.stdin)
-raise SystemExit(0 if any(item.get("pluginId") == "caveman@dotfiles" for item in data.get("installed", [])) else 1)
-'; then
-	echo "Codex plugin caveman@dotfiles: already installed."
-elif codex plugin add caveman@dotfiles --json >/dev/null; then
-	echo "Installed Codex plugin caveman@dotfiles."
-else
-	echo "warning: failed to install Codex plugin caveman@dotfiles." >&2
 fi

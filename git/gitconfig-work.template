@@ -1,2 +1,0 @@
-[user]
-	email = ${GIT_WORK_EMAIL}
