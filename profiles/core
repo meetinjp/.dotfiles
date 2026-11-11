@@ -1,0 +1,8 @@
+# Shared shell, terminal, and editor configuration.
+ghostty
+nvim
+prettier
+ripgrep
+starship
+tmux
+zsh

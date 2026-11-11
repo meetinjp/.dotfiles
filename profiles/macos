@@ -1,0 +1,9 @@
+# Shared configuration plus the Ruby tools used on macOS.
+ghostty
+nvim
+prettier
+ripgrep
+ruby
+starship
+tmux
+zsh

@@ -1,0 +1,13 @@
+# Review the laptop settings in niri and kanshi before applying this profile.
+ghostty
+nvim
+prettier
+ripgrep
+starship
+tmux
+zsh
+bin
+kanshi
+niri
+systemd
+zen

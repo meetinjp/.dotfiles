@@ -1,0 +1,10 @@
+# Optional mobile build tools; project setup belongs in the app repository.
+# Apply explicitly: brew bundle --file=macos/Brewfile.mobile
+brew "watchman"
+brew "ccache"
+brew "git-lfs"
+brew "xcbeautify"
+brew "ios-deploy"
+brew "fastlane"
+brew "mas"
+cask "xcodes-app"
