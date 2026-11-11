@@ -73,30 +73,39 @@ def include_defaults(configs, personal):
         if target in seen:
             continue
         seen.add(target)
-        original = config.read_bytes() if config.exists() else b''
-        includes = git_config('--file', str(config), '--get-all', 'include.path',
-                              allowed=(0, 1)).splitlines()
-        count = includes.count(str(personal))
-        if index == 0 and original.startswith(prefix) and count == 1:
-            continue
-        if index > 0 and not count:
-            continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, name = tempfile.mkstemp(prefix=f'.{target.name}.', dir=target.parent)
-        temporary = Path(name)
+        temporary = target.with_name(target.name + '.lock')
+        # Git follows config symlinks and locks the resolved target. Hold that
+        # same lock from the snapshot through replacement, leaving other locks intact.
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             os.close(descriptor)
+            original = config.read_bytes() if config.exists() else b''
+            bom = b'\xef\xbb\xbf' if original.startswith(b'\xef\xbb\xbf') else b''
+            includes = git_config('--file', str(config), '--get-all', 'include.path',
+                                  allowed=(0, 1)).splitlines()
+            count = includes.count(str(personal))
+            if index == 0 and original.removeprefix(bom).startswith(prefix) and count == 1:
+                continue
+            if index > 0 and not count:
+                continue
             temporary.write_bytes(original)
             # Move only our own include. Other includes and their order stay intact.
             git_config('--file', str(temporary), '--fixed-value', '--unset-all',
                        'include.path', str(personal), allowed=(0, 5))
-            content = (prefix if index == 0 else b'') + temporary.read_bytes()
+            content = bom + (prefix if index == 0 else b'') + temporary.read_bytes().removeprefix(bom)
             temporary.write_bytes(content)
+            git_config('--file', str(temporary), '--get-regexp', '.', allowed=(0, 1))
+            current = config.read_bytes() if config.exists() else b''
+            if config.resolve() != target or current != original:
+                raise ValueError('global Git configuration changed during setup; rerun without concurrent edits')
             if target.exists():
                 temporary.chmod(target.stat().st_mode & 0o7777)
             os.replace(temporary, target)
+            temporary = None
         finally:
-            temporary.unlink(missing_ok=True)
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
 
 def main():

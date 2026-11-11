@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -261,6 +262,93 @@ class GitSetupTests(unittest.TestCase):
         self.apply()
         self.assertEqual(xdg.read_bytes(), original)
         self.assertTrue(self.global_config.is_symlink())
+
+    def test_utf8_bom_stays_at_start_and_setup_is_idempotent(self):
+        original = b'\xef\xbb\xbf[alias]\n  personal = status\n'
+        self.global_config.write_bytes(original)
+        self.assertEqual(self.git('--global', '--get', 'alias.personal'), 'status')
+        self.apply()
+        content = self.global_config.read_bytes()
+        self.assertTrue(content.startswith(b'\xef\xbb\xbf'))
+        self.assertEqual(content.count(b'\xef\xbb\xbf'), 1)
+        self.assertEqual(self.git('--global', '--get', 'alias.personal'), 'status')
+        self.assertEqual(self.git('--global', '--get', 'user.email'), 'personal@example.test')
+        self.apply()
+        self.assertEqual(self.global_config.read_bytes(), content)
+
+    def test_held_git_config_lock_preserves_global_configuration(self):
+        for symlinked in (False, True):
+            with self.subTest(symlinked=symlinked):
+                if self.global_config.exists() or self.global_config.is_symlink():
+                    self.global_config.unlink()
+                target = self.home / 'personal-config' if symlinked else self.global_config
+                original = b'[alias]\n  personal = status\n'
+                target.write_bytes(original)
+                if symlinked:
+                    self.global_config.symlink_to(target)
+                lock = target.with_name(target.name + '.lock')
+                held = b'held by another Git writer\n'
+                lock.write_bytes(held)
+                try:
+                    native = subprocess.run(['git', 'config', '--global', 'alias.concurrent', 'status'],
+                                            env=self.env, capture_output=True, text=True, timeout=10)
+                    self.assertNotEqual(native.returncode, 0, native.stderr)
+                    result = self.apply(success=False)
+                    self.assertIn(str(lock), result.stderr)
+                    self.assertEqual(target.read_bytes(), original)
+                    self.assertEqual(lock.read_bytes(), held)
+                finally:
+                    lock.unlink()
+                self.apply()
+                self.assertEqual(self.git('--global', '--get', 'alias.personal'), 'status')
+                self.assertEqual(self.global_config.is_symlink(), symlinked)
+                self.assertFalse(lock.exists())
+
+    def interleave_writer(self, cooperative):
+        commands = self.home / 'commands'
+        commands.mkdir()
+        wrapper = commands / 'git'
+        wrapper.write_text('''#!/usr/bin/env python3
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+record = Path(os.environ['HOME']) / 'interleaved-writer'
+if '--unset-all' in sys.argv and not record.exists():
+    if os.environ['COOPERATIVE_WRITER'] == '1':
+        result = subprocess.run([os.environ['REAL_GIT'], 'config', '--global',
+                                 'alias.concurrent', 'status --short'], capture_output=True)
+        record.write_text(str(result.returncode))
+    else:
+        with (Path(os.environ['HOME']) / '.gitconfig').open('a') as stream:
+            stream.write('[alias]\\n  concurrent = status --short\\n')
+        record.write_text('0')
+os.execv(os.environ['REAL_GIT'], [os.environ['REAL_GIT'], *sys.argv[1:]])
+''')
+        wrapper.chmod(0o755)
+        self.env.update(REAL_GIT=shutil.which('git'), COOPERATIVE_WRITER=str(int(cooperative)),
+                        PATH=f'{commands}:{self.env["PATH"]}')
+        return self.home / 'interleaved-writer'
+
+    def test_git_writer_is_blocked_during_config_snapshot_and_replacement(self):
+        self.global_config.write_text('[alias]\n  personal = status\n')
+        record = self.interleave_writer(cooperative=True)
+        self.apply()
+        self.assertNotEqual(record.read_text(), '0')
+        self.assertEqual(self.git('--global', '--get', 'alias.personal'), 'status')
+        self.assertEqual(self.git('--global', '--get', 'user.email'), 'personal@example.test')
+        self.assertFalse(self.global_config.with_name('.gitconfig.lock').exists())
+
+    def test_noncooperating_writer_changes_are_not_overwritten(self):
+        original = '[alias]\n  personal = status\n'
+        self.global_config.write_text(original)
+        self.interleave_writer(cooperative=False)
+        result = self.apply(success=False)
+        self.assertIn('changed during setup', result.stderr)
+        self.assertEqual(self.global_config.read_text(), original + '[alias]\n  concurrent = status --short\n')
+        self.assertEqual(self.git('--global', '--get', 'alias.concurrent'), 'status --short')
+        self.assertFalse(self.global_config.with_name('.gitconfig.lock').exists())
 
 
 if __name__ == '__main__':

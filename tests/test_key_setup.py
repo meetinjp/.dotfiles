@@ -133,6 +133,40 @@ esac
         self.assertEqual(self.git('--get', 'gpg.format'), 'ssh')
         self.assertFalse(self.config.with_name('.gitconfig.lock').exists())
 
+    def test_included_boolean_true_spellings_are_accepted(self):
+        identity = self.identity.read_text()
+        for value in ['yes', 'on', '1', 'TRUE', None]:
+            with self.subTest(value=value):
+                setting = 'gpgsign' if value is None else f'gpgsign = {value}'
+                self.identity.write_text(f'{identity}[commit]\n  {setting}\n[tag]\n  {setting}\n')
+                included = self.identity.read_bytes()
+                self.apply()
+                self.assertEqual(self.git('--type=bool', '--get', 'commit.gpgsign'), 'true')
+                self.assertEqual(self.git('--type=bool', '--get', 'tag.gpgsign'), 'true')
+                self.assertEqual(self.git('--get', 'user.signingkey'), FINGERPRINT)
+                self.assertEqual(self.identity.read_bytes(), included)
+
+    def test_included_boolean_false_spellings_reject_without_changes(self):
+        identity = self.identity.read_text()
+        for section in ['commit', 'tag']:
+            for value in ['no', 'off', '0', 'false']:
+                with self.subTest(section=section, value=value):
+                    self.identity.write_text(f'{identity}[{section}]\n  gpgsign = {value}\n')
+                    before = self.config.read_bytes(), self.identity.read_bytes()
+                    result = self.apply(success=False)
+                    self.assertIn('included signing settings', result.stderr)
+                    self.assertEqual((self.config.read_bytes(), self.identity.read_bytes()), before)
+                    self.assertFalse(self.config.with_name('.gitconfig.lock').exists())
+
+    def test_invalid_included_boolean_rejects_without_changes(self):
+        with self.identity.open('a') as stream:
+            stream.write('[commit]\n  gpgsign = not-a-boolean\n')
+        before = self.config.read_bytes(), self.identity.read_bytes()
+        result = self.apply(success=False)
+        self.assertIn('boolean', result.stderr)
+        self.assertEqual((self.config.read_bytes(), self.identity.read_bytes()), before)
+        self.assertFalse(self.config.with_name('.gitconfig.lock').exists())
+
     def test_conditional_ssh_signing_keeps_precedence_over_new_defaults(self):
         work = self.home / 'work'
         work.mkdir()

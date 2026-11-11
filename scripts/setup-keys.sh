@@ -141,7 +141,10 @@ try:
         config('--file', str(evaluation), '--add', 'include.path', str(path.absolute()))
     environment = dict(os.environ, GIT_CONFIG_GLOBAL=str(evaluation))
     for key, value in settings.items():
-        if config('--global', '--includes', '--get', key, env=environment) != value:
+        arguments = ['--global', '--includes']
+        if key in ('commit.gpgsign', 'tag.gpgsign'):
+            arguments.append('--type=bool')
+        if config(*arguments, '--get', key, env=environment) != value:
             raise ValueError('included signing settings override the selected OpenPGP key or program; '
                              'reconcile those settings before rerunning; Git configuration was not changed')
     current = global_path.read_bytes() if global_path.exists() else b''

@@ -78,6 +78,7 @@ def link(source, target, backup_dir):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--home', type=Path, help='use an isolated home, ignoring config-directory environment overrides')
+    parser.add_argument('--check', action='store_true', help='validate sources and user files without changing them')
     args = parser.parse_args()
     home = args.home.expanduser().resolve() if args.home else Path.home()
     codex = home / '.codex'
@@ -119,6 +120,10 @@ def main():
                   if name in plugins and plugins[name] is not False]
     for name in duplicates:
         plugins[name] = False
+
+    if args.check:
+        print('Caveman sources and existing user files are valid.')
+        return
 
     linked = 0
     backups = home / '.agents/backups/caveman'

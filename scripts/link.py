@@ -20,7 +20,20 @@ use JSON::PP qw(decode_json encode_json);
 use File::Spec;
 my $script = shift @ARGV;
 require $script;
-my $request = decode_json(do { local $/; <STDIN> });
+sub filesystem_bytes {
+    my ($value) = @_;
+    if (ref $value eq 'HASH') {
+        return {map {
+            my $key = $_;
+            utf8::downgrade($key, 1) or die "Invalid filesystem path transport";
+            $key => filesystem_bytes($value->{$_})
+        } keys %$value};
+    }
+    return [map {filesystem_bytes($_)} @$value] if ref $value eq 'ARRAY';
+    utf8::downgrade($value, 1) or die "Invalid filesystem path transport";
+    return $value;
+}
+my $request = filesystem_bytes(decode_json(do { local $/; <STDIN> }));
 my ($options, $unstow, $stow) = main::process_options();
 {
     package DotfilesStow;
@@ -39,9 +52,12 @@ if ($request->{sources}) {
     my %ignored;
     $planner->within_target_do(sub {
         for my $package (keys %{$request->{sources}}) {
-            $ignored{$package} = [grep {
-                $planner->ignore($planner->{stow_path}, $package, $_)
-            } @{$request->{sources}{$package}}];
+            my @ignored;
+            # Reading an ignore file may change Perl's default $_ variable.
+            for my $path (@{$request->{sources}{$package}}) {
+                push @ignored, $path if $planner->ignore($planner->{stow_path}, $package, $path);
+            }
+            $ignored{$package} = \@ignored;
         }
     });
     print encode_json(\%ignored);
@@ -60,17 +76,30 @@ def profile_packages(profile):
             if line.split('#', 1)[0].strip()]
 
 
+def map_path_strings(value, convert):
+    if isinstance(value, dict):
+        return {convert(key): map_path_strings(item, convert) for key, item in value.items()}
+    if isinstance(value, list):
+        return [map_path_strings(item, convert) for item in value]
+    return convert(value) if isinstance(value, str) else value
+
+
 def inspect_stow(command, **request):
     # Load Stow's CLI as its own tests do. This retains its interpreter, library
     # paths, rc options, and Perl ignore semantics without executing any tasks.
     executable = Path(shutil.which('stow')).resolve()
     with executable.open() as stream:
         interpreter = shlex.split(stream.readline().removeprefix('#!').strip())
+    # Stow treats filesystem names as bytes. Latin-1 carries those bytes through
+    # JSON reversibly, including names outside Unicode or the active locale.
+    request = map_path_strings(request, lambda value: os.fsencode(value).decode('latin1'))
     result = subprocess.run([*interpreter, '-e', STOW_INSPECT, str(executable), *command[1:]],
-                            input=json.dumps(request), capture_output=True, text=True)
+                            input=json.dumps(request), capture_output=True,
+                            encoding='utf-8', errors='surrogateescape')
     if result.returncode:
         raise ValueError(result.stderr.strip() or 'GNU Stow inspection failed')
-    return json.loads(result.stdout)
+    return map_path_strings(json.loads(result.stdout),
+                            lambda value: os.fsdecode(value.encode('latin1')))
 
 
 def preflight(packages, home, available, command):
@@ -165,10 +194,12 @@ def main():
     if not shutil.which('stow'):
         raise ValueError('GNU Stow is required. Ubuntu: sudo apt install stow; macOS: brew install stow')
     home = Path.home()
+    # Resolve the directory container, leaving managed file symlinks unresolved.
+    stow_home = home.resolve()
     stow_packages = [package for package in packages if package != 'zen']
-    command = ['stow', '--dir', str(ROOT), '--target', str(home), '--no-folding',
+    command = ['stow', '--dir', str(ROOT), '--target', str(stow_home), '--no-folding',
                '--delete' if args.delete else '--stow', *stow_packages]
-    normalizations = preflight(stow_packages, home, available, command)
+    normalizations = preflight(stow_packages, stow_home, available, command)
     browser = [sys.executable, str(ROOT / 'scripts/link-zen.py')]
     if args.delete:
         browser.append('--delete')

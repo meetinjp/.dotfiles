@@ -19,8 +19,8 @@ class AgentSkillsTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name)
 
-    def apply(self, success=True):
-        result = subprocess.run([sys.executable, str(SCRIPT), '--home', str(self.home)],
+    def apply(self, *arguments, success=True):
+        result = subprocess.run([sys.executable, str(SCRIPT), '--home', str(self.home), *arguments],
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
         return result
@@ -31,7 +31,7 @@ class AgentSkillsTests(unittest.TestCase):
         path.write_text(content)
         return path
 
-    def setup_wrapper(self):
+    def setup_wrapper(self, success=True):
         repository = self.home / 'checkout'
         for relative in ['agent-skills/setup.sh', 'agent-skills/apply.py',
                          'agent-skills/CAVEMAN.md', 'codex/apply.sh',
@@ -57,7 +57,7 @@ class AgentSkillsTests(unittest.TestCase):
         for _ in range(2):
             result = subprocess.run(['bash', str(repository / 'agent-skills/setup.sh')],
                                     env=env, capture_output=True, text=True, timeout=10)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
 
     def test_setup_wrapper_installs_base_guidance_before_caveman_merge(self):
         self.setup_wrapper()
@@ -74,6 +74,37 @@ class AgentSkillsTests(unittest.TestCase):
         self.assertNotIn('# Personal working agreements', guide.read_text())
         self.assertEqual(guide.read_text().count('<!-- dotfiles:caveman:start -->'), 1)
         self.assertFalse(guide.is_symlink())
+
+    def test_setup_wrapper_rejects_invalid_inputs_before_disabling_codex_plugins(self):
+        cases = [('.claude/settings.json', '{'),
+                 ('.claude/settings.json', '{"enabledPlugins": []}'),
+                 ('.config/caveman/config.json', '[]'),
+                 ('.codex/AGENTS.md', '<!-- dotfiles:caveman:start -->\n')]
+        for index, (relative, content) in enumerate(cases):
+            with self.subTest(relative=relative, content=content):
+                self.home = Path(self.temp.name) / str(index)
+                config = self.put('.codex/config.toml',
+                                  '[plugins."caveman@caveman"]\nenabled = true\n'
+                                  '[plugins."caveman@dotfiles"]\nenabled = true\n')
+                invalid = self.put(relative, content)
+                before = {path: (path.read_bytes(), path.stat().st_mtime_ns)
+                          for path in [config, invalid]}
+                self.setup_wrapper(success=False)
+                for path, state in before.items():
+                    self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), state)
+                self.assertFalse((self.home / '.agents').exists())
+
+    def test_check_only_does_not_create_or_change_user_files(self):
+        self.apply('--check')
+        self.assertEqual(list(self.home.iterdir()), [])
+        paths = [self.put('.codex/AGENTS.md', '# Personal rules\n'),
+                 self.put('.claude/settings.json', '{"enabledPlugins":{"caveman@caveman":true}}\n'),
+                 self.put('.config/caveman/config.json', '{"defaultMode":"off"}\n')]
+        before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in paths}
+        self.apply('--check')
+        for path, state in before.items():
+            self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), state)
+        self.assertFalse((self.home / '.agents').exists())
 
     def test_complete_family_is_discoverable_in_both_hosts(self):
         self.apply()

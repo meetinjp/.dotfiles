@@ -27,6 +27,7 @@ exports. Plugin caches are left intact. Claude's unrelated plugins stay enabled.
 The setup does not install the separate Caveman Cloud gateway or CLI hooks.
 
 To apply only shared skills and guidance, run `python3 agent-skills/apply.py`.
+Add `--check` to validate sources and existing user files without changing them.
 For an isolated check, pass `--home /tmp/caveman-check`. This standalone skill
 installer also supports Windows with Python and symlink privileges; the desktop
 installer targets Ubuntu and macOS.

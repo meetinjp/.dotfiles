@@ -146,6 +146,63 @@ with patch.object(sys, 'platform', 'darwin'):
         self.assert_linked('.zshrc')
         self.assert_linked('.config/tmux/tmux.conf')
 
+    def check_owned_link_lifecycle(self, relatives, *packages):
+        for relative in relatives:
+            target = self.home / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.symlink_to(self.sources[relative])
+        before_home, before_source = self.snapshot(self.home), self.snapshot(self.checkout)
+        for arguments in [('--dry-run', *packages), ('--dry-run', '--delete', *packages)]:
+            result = self.install(*arguments)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(self.snapshot(self.home), before_home)
+            self.assertEqual(self.snapshot(self.checkout), before_source)
+        for _ in range(2):
+            result = self.install(*packages)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for relative in relatives:
+                self.assert_linked(relative)
+        result = self.install('--delete', *packages)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for relative in relatives:
+            self.assertFalse((self.home / relative).exists())
+            self.assertFalse((self.home / relative).is_symlink())
+        self.assertEqual(self.snapshot(self.checkout), before_source)
+
+    def test_owned_absolute_links_with_symlinked_home(self):
+        alias = self.root / 'aliases/deep/home'
+        alias.parent.mkdir(parents=True)
+        alias.symlink_to(self.home, target_is_directory=True)
+        self.home = alias
+        self.env['HOME'] = str(alias)
+        self.check_owned_link_lifecycle(['.zshrc', '.config/tmux/tmux.conf'], 'zsh', 'tmux')
+        self.assertTrue(alias.is_symlink())
+
+    def test_owned_absolute_links_with_unicode_home(self):
+        relocated = self.root / 'hôme'
+        self.home.rename(relocated)
+        self.home = relocated
+        self.env['HOME'] = str(relocated)
+        self.check_owned_link_lifecycle(['.zshrc', '.config/tmux/tmux.conf'], 'zsh', 'tmux')
+
+    def test_owned_absolute_link_with_unicode_filename(self):
+        relative = '.café'
+        source = self.checkout / 'zsh' / relative
+        source.write_text('managed Unicode configuration\n')
+        self.sources[relative] = source
+        self.check_owned_link_lifecycle([relative], 'zsh')
+
+    def test_unicode_ignore_path_matches_stow_and_remains_unchanged(self):
+        relative = '.café'
+        (self.checkout / 'zsh' / relative).write_text('ignored Unicode configuration\n')
+        (self.checkout / 'zsh/.stow-local-ignore').write_text(r'^/\.café$' + '\n')
+        target = self.home / relative
+        target.write_text('personal configuration\n')
+        for arguments in [('--dry-run', 'zsh'), ('zsh',)]:
+            result = self.install(*arguments)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(target.read_text(), 'personal configuration\n')
+
     def test_unmanaged_file_blocks_all_packages_before_normalization(self):
         known = self.home / '.zshrc'
         known.symlink_to(self.sources['.zshrc'])
@@ -315,6 +372,29 @@ with patch.object(sys, 'platform', 'darwin'):
         self.assertEqual(config.read_bytes(), original)
         self.assertEqual(config.stat().st_mode & 0o777, 0o640)
         self.assertFalse((self.home / '.config/ghostty/config-macos.conf').is_symlink())
+
+    def test_macos_ghostty_symlinked_home_preserves_existing_include(self):
+        alias = self.root / 'aliases/deep/home'
+        alias.parent.mkdir(parents=True)
+        alias.symlink_to(self.home, target_is_directory=True)
+        self.home = alias
+        self.env['HOME'] = str(alias)
+        config = self.home / 'Library/Application Support/com.mitchellh.ghostty/config'
+        config.parent.mkdir(parents=True)
+        original = b'font-size = 19\n'
+        include = f'config-file = {self.home}/.config/ghostty/config-macos.conf\n'.encode()
+        # Existing installations use the HOME spelling, including a directory alias.
+        config.write_bytes(original + include)
+        for _ in range(2):
+            result = self.install_macos('ghostty')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(config.read_bytes(), original + include)
+            self.assert_linked('.config/ghostty/config-macos.conf')
+        result = self.install_macos('--delete', 'ghostty')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(config.read_bytes(), original)
+        self.assertFalse((self.home / '.config/ghostty/config-macos.conf').is_symlink())
+        self.assertTrue(alias.is_symlink())
 
     def test_macos_ghostty_delete_preserves_existing_config_symlink(self):
         config = self.home / 'Library/Application Support/com.mitchellh.ghostty/config'
