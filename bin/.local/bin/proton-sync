@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Keep sync state outside the disposable cache. Initialization is deliberately
+# separate: this command never retries a failed bisync with --resync.
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage: proton-sync [--dry-run]
+
+Sync ~/ProtonDrive with the LinuxSync folder on the rclone remote proton:.
+Changes and deletions propagate in both directions. Keep a separate backup.
+
+  --dry-run, -n  Preview changes without copying or deleting files.
+  --help, -h     Show this help.
+
+Before the first run, follow the Proton Drive section of ~/.dotfiles/README.md
+to authenticate, create access markers, and initialize bisync manually.
+EOF
+}
+
+extra_args=()
+if [[ $# -gt 1 ]]; then
+	usage >&2
+	exit 2
+fi
+case "${1:-}" in
+	'') ;;
+	--dry-run|-n) extra_args=(--dry-run) ;;
+	--help|-h) usage; exit 0 ;;
+	*) usage >&2; exit 2 ;;
+esac
+
+if ! command -v rclone >/dev/null 2>&1; then
+	echo "proton-sync: rclone is missing; run ~/.dotfiles/scripts/proton-drive/setup.sh." >&2
+	exit 1
+fi
+
+sync_dir="$HOME/ProtonDrive"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/rclone/bisync"
+if [[ ! -d "$sync_dir" || ! -f "$sync_dir/RCLONE_TEST" ]]; then
+	echo "proton-sync: $sync_dir or its RCLONE_TEST access marker is missing." >&2
+	echo "Follow the Proton Drive initialization steps in ~/.dotfiles/README.md." >&2
+	exit 1
+fi
+
+umask 077
+mkdir -p "$state_dir"
+exec rclone bisync "$sync_dir" proton:LinuxSync \
+	--workdir "$state_dir" --check-access \
+	--protondrive-enable-caching=false --verbose "${extra_args[@]}"
