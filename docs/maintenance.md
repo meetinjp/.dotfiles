@@ -5,6 +5,8 @@
 Pull repository changes, initialize the submodules you use, preview the selected
 profile, then apply it. Submodules stay at the revisions recorded by the parent
 repository; `git pull` alone does not update an initialized submodule checkout.
+The full check suite requires both submodules, including Caveman when installing
+only the core profile. It reports the initialization command if a source is missing.
 
 ```sh
 git pull --ff-only
@@ -37,10 +39,14 @@ enabled services are not undone. Keep personal backups outside the repository.
 
 `./setup.sh git` uses `GIT_NAME` and `GIT_EMAIL`, or existing global identity.
 It creates an included config under `${XDG_CONFIG_HOME:-~/.config}/git/` without
-replacing unrelated global Git settings. Optional `GIT_WORK_EMAIL` is saved to
+replacing unrelated global Git settings. These defaults precede existing settings,
+so explicit identities and conditional work identities keep their precedence.
+Optional `GIT_WORK_EMAIL` is saved to
 an unincluded work file; enable it explicitly where appropriate.
 
 `./setup.sh keys` enables signing only after finding or creating a signing key.
+Included signing profiles keep precedence. Conflicting included settings stop
+setup before it changes Git configuration; reconcile those settings and rerun.
 Register its printed public signing and SSH keys with your Git host. Back up
 private keys securely; dotfiles are not a private-key backup.
 

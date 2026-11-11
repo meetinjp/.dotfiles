@@ -73,7 +73,8 @@ Existing hardware drivers, display managers, and power policy remain OS-owned.
 
 ## Maintain
 
-Run `./scripts/check.sh` before committing. CI runs shell checks and isolated
+For checks, initialize both submodules with `git submodule update --init --recursive`,
+then run `./scripts/check.sh` before committing. CI runs shell checks and isolated
 Python integration tests; it does not provision a complete desktop. See
 [maintenance](docs/maintenance.md) for updates, conflicts, and machine-local data.
 

@@ -39,15 +39,18 @@ check_noctalia_requirements() {
 		warn "The existing qs is not noctalia-qs. Select the compatible engine on PATH; no binary was replaced."
 		return 1
 	fi
-	local qtver=''
+	local qtver='' candidate=''
 	if have qmake6; then
 		qtver="$(qmake6 --version 2>/dev/null | sed -n 's/.*Qt version \([0-9][0-9.]*\).*/\1/p' | head -1)"
 	elif have pkg-config; then
 		qtver="$(pkg-config --modversion Qt6Core 2>/dev/null || true)"
 	fi
-	if [[ -z "$qtver" ]] && have apt-cache; then
-		qtver="$(LC_ALL=C apt-cache policy qt6-base-dev 2>/dev/null | awk '/Candidate:/ {print $2; exit}')"
-		qtver="${qtver#*:}"
+	if { [[ ! "$qtver" =~ ^[0-9]+\.[0-9]+ ]] || ! dpkg --compare-versions "$qtver" ge 6.6; } && have apt-cache; then
+		candidate="$(LC_ALL=C apt-cache policy qt6-base-dev 2>/dev/null | awk '/Candidate:/ {print $2; exit}')"
+		candidate="${candidate#*:}"
+		if [[ -z "$qtver" ]] || { [[ "$candidate" =~ ^[0-9]+\.[0-9]+ ]] && dpkg --compare-versions "$candidate" ge 6.6; }; then
+			qtver="$candidate"
+		fi
 	fi
 	if [[ ! "$qtver" =~ ^[0-9]+\.[0-9]+ ]] || ! dpkg --compare-versions "$qtver" ge 6.6; then
 		warn "Noctalia's Qt/QML engine requires Qt >= 6.6; found ${qtver:-no installed or available Qt}."

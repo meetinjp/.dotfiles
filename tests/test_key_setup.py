@@ -21,6 +21,7 @@ class KeySetupTests(unittest.TestCase):
         self.bin = self.home / 'commands'
         self.bin.mkdir()
         self.env = dict(os.environ, HOME=str(self.home), PATH=f'{self.bin}:/usr/bin:/bin',
+                        XDG_CONFIG_HOME=str(self.home / '.config'),
                         GIT_CONFIG_NOSYSTEM='1', DOTFILES_YES='0')
         for key in list(self.env):
             if key.startswith('GIT_CONFIG_') and key != 'GIT_CONFIG_NOSYSTEM':
@@ -69,10 +70,10 @@ esac
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout.rstrip('\n')
 
-    def apply(self):
+    def apply(self, success=True):
         result = subprocess.run(['bash', str(SCRIPT)], input='', env=self.env,
                                 capture_output=True, text=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
         self.assertNotIn('Unexpected fake GPG operation', result.stderr)
         return result
 
@@ -98,6 +99,9 @@ esac
         self.assertEqual(self.git('--get', 'commit.gpgsign'), 'true')
         self.assertEqual(self.git('--get', 'tag.gpgsign'), 'true')
         self.assertEqual(self.git('--get', 'gpg.ssh.program'), '/personal/ssh-sign')
+        before = self.config.read_bytes()
+        self.apply()
+        self.assertEqual(self.config.read_bytes(), before)
 
     def test_skipping_key_generation_preserves_signing_configuration(self):
         (self.home / 'no-key').touch()
@@ -112,6 +116,94 @@ esac
         self.assertEqual(self.config.read_bytes(), before)
         self.assertEqual(self.git('--get', 'gpg.format'), 'ssh')
         self.assertEqual(self.git('--get', 'user.signingkey'), 'ssh-ed25519 existing-key')
+
+    def test_conflicting_later_include_fails_before_changing_signing_settings(self):
+        conflicting = self.home / 'signing.inc'
+        conflicting.write_text('[gpg]\n  format = ssh\n')
+        self.config.write_text(f'''[gpg]
+  format = ssh
+[include]
+  path = "{self.identity}"
+  path = "{conflicting}"
+''')
+        before = self.config.read_bytes(), conflicting.read_bytes()
+        result = self.apply(success=False)
+        self.assertIn('included signing settings', result.stderr)
+        self.assertEqual((self.config.read_bytes(), conflicting.read_bytes()), before)
+        self.assertEqual(self.git('--get', 'gpg.format'), 'ssh')
+        self.assertFalse(self.config.with_name('.gitconfig.lock').exists())
+
+    def test_conditional_ssh_signing_keeps_precedence_over_new_defaults(self):
+        work = self.home / 'work'
+        work.mkdir()
+        subprocess.run(['git', 'init', '-q', str(work)], env=self.env, check=True,
+                       capture_output=True, text=True, timeout=10)
+        conditional = self.home / 'work-signing.inc'
+        original = '''[user]
+  signingkey = ssh-ed25519 work-key
+[gpg]
+  format = ssh
+[gpg "ssh"]
+  program = /personal/work-ssh-sign
+'''
+        conditional.write_text(original)
+        with self.config.open('a') as stream:
+            stream.write(f'[includeIf "gitdir:{work}/"]\n  path = "{conditional}"\n')
+        self.apply()
+        self.assertEqual(self.git('--get', 'gpg.format'), 'openpgp')
+        for key, expected in [('gpg.format', 'ssh'),
+                              ('user.signingkey', 'ssh-ed25519 work-key'),
+                              ('gpg.ssh.program', '/personal/work-ssh-sign')]:
+            result = subprocess.run(['git', '-C', str(work), 'config', '--get', key],
+                                    env=self.env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.rstrip('\n'), expected)
+        self.assertEqual(conditional.read_text(), original)
+
+    def test_relative_include_and_global_symlink_survive_signing_setup(self):
+        actual = self.identity.parent / 'personal-config'
+        (self.home / 'identity.inc').write_bytes(self.identity.read_bytes())
+        actual.write_text('[include]\n  path = identity.inc\n[alias]\n  mine = status --short\n')
+        self.config.unlink()
+        self.config.symlink_to(actual)
+        self.apply()
+        self.assertTrue(self.config.is_symlink())
+        self.assertEqual(self.config.resolve(), actual)
+        self.assertEqual(self.git('--get', 'user.email'), 'included@example.test')
+        self.assertEqual(self.git('--get', 'gpg.format'), 'openpgp')
+        self.assertEqual(self.git('--get', 'alias.mine'), 'status --short')
+        self.assertFalse(actual.with_name('personal-config.lock').exists())
+
+    def test_split_global_identity_and_conditional_signing_are_preserved(self):
+        first = self.identity.parent / 'config'
+        first.write_bytes(self.config.read_bytes())
+        work = self.home / 'work'
+        work.mkdir()
+        subprocess.run(['git', 'init', '-q', str(work)], env=self.env, check=True,
+                       capture_output=True, text=True, timeout=10)
+        profile = self.home / 'work.inc'
+        profile.write_text('[gpg]\n  format = ssh\n[user]\n  signingkey = ssh-ed25519 work-key\n')
+        with first.open('a') as stream:
+            stream.write(f'[includeIf "gitdir:{work}/"]\n  path = "{profile}"\n')
+        original = '[alias]\n  mine = status --short\n'
+        self.config.write_text(original)
+        self.apply()
+        self.assertEqual(self.config.read_text(), original)
+        for directory, expected in [(self.home, 'openpgp'), (work, 'ssh')]:
+            result = subprocess.run(['git', '-C', str(directory), 'config', '--get', 'gpg.format'],
+                                    env=self.env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.rstrip('\n'), expected)
+
+    def test_conflicting_later_global_file_fails_without_partial_changes(self):
+        first = self.identity.parent / 'config'
+        first.write_bytes(self.config.read_bytes())
+        self.config.write_text('[gpg]\n  format = ssh\n[user]\n  signingkey = ssh-ed25519 personal-key\n')
+        before = first.read_bytes(), self.config.read_bytes()
+        result = self.apply(success=False)
+        self.assertIn('included signing settings', result.stderr)
+        self.assertEqual((first.read_bytes(), self.config.read_bytes()), before)
+        self.assertFalse(first.with_name('config.lock').exists())
 
 
 if __name__ == '__main__':

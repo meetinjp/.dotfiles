@@ -112,10 +112,38 @@ exit 2
     def test_qt_floor_fails_before_source_or_package_operations(self):
         (self.bin / 'qs').unlink()
         self.command('qmake6', "printf 'Using Qt version 6.4.2 in /qt\\n'\n")
+        self.command('apt-cache', "printf '  Candidate: 6.4.2+dfsg-1\\n'\n")
         result = self.call()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('requires Qt >= 6.6', result.stderr)
         self.assertFalse(self.target.exists())
+
+    def test_compatible_candidate_allows_upgrading_old_installed_qt(self):
+        (self.bin / 'qs').unlink()
+        self.command('qmake6', "printf 'Using Qt version 6.4.2 in /qt\\n'\n")
+        self.command('apt-cache', "printf '  Candidate: 1:6.8.3+dfsg-1\\n'\n")
+        result = self.call('check_noctalia_requirements')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Qt 6.8.3', result.stdout)
+        self.assertFalse((self.home / '.config').exists())
+
+    def test_missing_candidate_does_not_allow_old_installed_qt(self):
+        (self.bin / 'qs').unlink()
+        self.command('qmake6', "printf 'Using Qt version 6.4.2 in /qt\\n'\n")
+        self.command('apt-cache', "printf '  Candidate: (none)\\n'\n")
+        result = self.call('check_noctalia_requirements')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('requires Qt >= 6.6', result.stderr)
+        self.assertFalse((self.home / '.config').exists())
+
+    def test_compatible_installed_qt_does_not_require_newer_candidate(self):
+        (self.bin / 'qs').unlink()
+        self.command('qmake6', "printf 'Using Qt version 6.8.3 in /qt\\n'\n")
+        self.command('apt-cache', "printf '  Candidate: 6.4.2+dfsg-1\\n'\n")
+        result = self.call('check_noctalia_requirements')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Qt 6.8.3', result.stdout)
+        self.assertFalse((self.home / '.config').exists())
 
     def test_check_only_does_not_install_or_create_config(self):
         result = subprocess.run(['bash', str(SCRIPT), '--check'], env=self.env,

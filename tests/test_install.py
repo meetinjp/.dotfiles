@@ -202,6 +202,95 @@ with patch.object(sys, 'platform', 'darwin'):
             self.assertFalse(os.path.isabs(os.readlink(target)))
         self.assertEqual(self.snapshot(self.checkout), source_before)
 
+    def test_nested_metadata_conflicts_are_reported_before_normalization(self):
+        for relative in ['.config/tmux/.gitattributes', '.config/tmux/.gitmodules',
+                         '.config/tmux/README.md', '.config/tmux/LICENSE']:
+            with self.subTest(relative=relative):
+                source = self.checkout / 'tmux' / relative
+                source.write_text('managed metadata\n')
+                target = self.home / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('personal metadata\n')
+                known = self.home / '.zshrc'
+                if not known.is_symlink():
+                    known.symlink_to(self.sources['.zshrc'])
+                before = self.snapshot(self.home)
+                for arguments in [('--dry-run', 'zsh', 'tmux'), ('zsh', 'tmux')]:
+                    result = self.install(*arguments)
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(self.snapshot(self.home), before)
+                target.unlink()
+                source.unlink()
+
+    def test_package_ignore_rules_use_stows_perl_patterns(self):
+        (self.checkout / 'tmux/.stow-local-ignore').write_text(
+            r'^/\.config/tmux/(?=tmux\.conf$).*' + '\n')
+        target = self.home / '.config/tmux/tmux.conf'
+        target.parent.mkdir(parents=True)
+        target.write_text('personal configuration\n')
+        for arguments in [('--dry-run', 'zsh', 'tmux'), ('zsh', 'tmux')]:
+            result = self.install(*arguments)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(target.read_text(), 'personal configuration\n')
+            self.assertFalse((self.home / '.stow-local-ignore').exists())
+        self.assert_linked('.zshrc')
+
+    def test_root_metadata_and_backup_files_are_ignored_without_normalization(self):
+        for relative in ['README.md', '.config/tmux/.gitignore', '.config/tmux/config~']:
+            source = self.checkout / 'tmux' / relative
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text('ignored source\n')
+            target = self.home / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.symlink_to(source)
+        before = {relative: os.readlink(self.home / relative)
+                  for relative in ['README.md', '.config/tmux/.gitignore', '.config/tmux/config~']}
+        result = self.install('tmux')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for relative, link in before.items():
+            self.assertEqual(os.readlink(self.home / relative), link)
+
+    def test_local_ignore_list_overrides_global_ignore_list(self):
+        (self.home / '.stow-global-ignore').write_text(r'^/\.config/tmux/tmux\.conf$' + '\n')
+        target = self.home / '.config/tmux/tmux.conf'
+        target.parent.mkdir(parents=True)
+        target.write_text('personal configuration\n')
+        result = self.install('--dry-run', 'tmux')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        (self.checkout / 'tmux/.stow-local-ignore').write_text('')
+        before = self.snapshot(self.home)
+        result = self.install('--dry-run', 'tmux')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.snapshot(self.home), before)
+
+    def test_directory_folded_by_another_package_is_safely_unfolded(self):
+        result = subprocess.run(['stow', '--dir', str(self.checkout), '--target', str(self.home),
+                                 'ghostty'], env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.home / '.config').is_symlink())
+        before_home, before_source = self.snapshot(self.home), self.snapshot(self.checkout)
+        result = self.install('--dry-run', 'tmux')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.snapshot(self.home), before_home)
+        result = self.install('tmux')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / '.config').is_symlink())
+        self.assert_linked('.config/tmux/tmux.conf')
+        self.assertEqual((self.home / '.config/ghostty/config').resolve(),
+                         self.sources['.config/ghostty/config'])
+        self.assertEqual(self.snapshot(self.checkout), before_source)
+
+    def test_stow_planner_conflict_preserves_absolute_links(self):
+        target = self.home / '.zshrc'
+        target.symlink_to(self.sources['.zshrc'])
+        for package in ['tmux', 'ghostty']:
+            (self.checkout / package / '.duplicate').write_text('conflicting package content\n')
+        before = self.snapshot(self.home)
+        for arguments in [('--dry-run', 'zsh', 'tmux', 'ghostty'), ('zsh', 'tmux', 'ghostty')]:
+            result = self.install(*arguments)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(self.snapshot(self.home), before)
+
     def test_unknown_package_fails_without_home_changes(self):
         before = self.snapshot(self.home)
         result = self.install('zsh', 'unknown-package')

@@ -2,9 +2,10 @@
 """Preview, link, or remove selected GNU Stow packages without provisioning."""
 
 import argparse
+import json
 import os
 from pathlib import Path
-import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -14,28 +15,83 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 
 
+STOW_INSPECT = r'''
+use JSON::PP qw(decode_json encode_json);
+use File::Spec;
+my $script = shift @ARGV;
+require $script;
+my $request = decode_json(do { local $/; <STDIN> });
+my ($options, $unstow, $stow) = main::process_options();
+{
+    package DotfilesStow;
+    our @ISA = ('Stow');
+    sub read_a_link {
+        my ($self, $path) = @_;
+        my $absolute = File::Spec->rel2abs($path);
+        return $self->{dotfiles_links}{$absolute}
+            if !$self->link_task_action($path) && exists $self->{dotfiles_links}{$absolute};
+        return $self->SUPER::read_a_link($path);
+    }
+}
+my $planner = DotfilesStow->new(%$options);
+$planner->{dotfiles_links} = $request->{links} || {};
+if ($request->{sources}) {
+    my %ignored;
+    $planner->within_target_do(sub {
+        for my $package (keys %{$request->{sources}}) {
+            $ignored{$package} = [grep {
+                $planner->ignore($planner->{stow_path}, $package, $_)
+            } @{$request->{sources}{$package}}];
+        }
+    });
+    print encode_json(\%ignored);
+} else {
+    $planner->plan_unstow(@$unstow);
+    $planner->plan_stow(@$stow);
+    my %conflicts = $planner->get_conflicts;
+    print encode_json(\%conflicts);
+}
+'''
+
+
 def profile_packages(profile):
     return [line.split('#', 1)[0].strip()
             for line in (ROOT / 'profiles' / profile).read_text().splitlines()
             if line.split('#', 1)[0].strip()]
 
 
-def ignored(path):
-    # These metadata files are excluded by Stow's built-in ignore list too.
-    return any(re.match(r'^(?:\.git(?:$|ignore$|attributes$|modules$)|README(?:\..*)?$|COPYING$|LICENSE(?:\..*)?$)',
-                        part) for part in path.parts)
+def inspect_stow(command, **request):
+    # Load Stow's CLI as its own tests do. This retains its interpreter, library
+    # paths, rc options, and Perl ignore semantics without executing any tasks.
+    executable = Path(shutil.which('stow')).resolve()
+    with executable.open() as stream:
+        interpreter = shlex.split(stream.readline().removeprefix('#!').strip())
+    result = subprocess.run([*interpreter, '-e', STOW_INSPECT, str(executable), *command[1:]],
+                            input=json.dumps(request), capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError(result.stderr.strip() or 'GNU Stow inspection failed')
+    return json.loads(result.stdout)
 
 
-def preflight(packages, home):
+def preflight(packages, home, available, command):
     normalizations = {}
     conflicts = []
+    sources = {}
     for package in packages:
         directory = ROOT / package
         if not directory.is_dir():
             raise ValueError(f'Package source is missing: {directory}')
-        for source in directory.rglob('*'):
+        sources[package] = list(directory.rglob('*'))
+    excluded = inspect_stow(command, sources={
+        package: [str(source.relative_to(ROOT / package)) for source in paths]
+        for package, paths in sources.items()}) if packages else {}
+    for package, paths in sources.items():
+        directory = ROOT / package
+        ignored = set(excluded[package])
+        for source in paths:
             relative = source.relative_to(directory)
-            if ignored(relative) or (source.is_dir() and not source.is_symlink()):
+            if (any(str(path) in ignored for path in (relative, *relative.parents))
+                    or (source.is_dir() and not source.is_symlink())):
                 continue
             target = home / relative
             if target.exists() or target.is_symlink():
@@ -49,9 +105,11 @@ def preflight(packages, home):
                     continue
                 destination = home / parent
                 if destination.is_symlink():
-                    if destination.resolve() == (directory / parent).resolve():
+                    owned = next((ROOT / owner / parent for owner in available
+                                  if destination.resolve() == (ROOT / owner / parent).resolve()), None)
+                    if owned is not None:
                         if os.path.isabs(os.readlink(destination)):
-                            normalizations[destination] = directory / parent
+                            normalizations[destination] = owned
                     else:
                         conflicts.append(str(destination))
                 elif destination.exists() and not destination.is_dir():
@@ -61,6 +119,17 @@ def preflight(packages, home):
     if conflicts:
         raise ValueError('Unmanaged targets preserved; resolve these conflicts first:\n  '
                          + '\n  '.join(sorted(set(conflicts))))
+    if packages:
+        # Model only the known owned links as relative; Stow can then detect
+        # every planning conflict before normalization changes the real target.
+        planned = inspect_stow(command, links={
+            str(target): os.path.relpath(source, target.parent)
+            for target, source in normalizations.items()})
+        if planned:
+            details = [message for action in planned.values() for messages in action.values()
+                       for message in messages]
+            raise ValueError('Stow conflicts preserved; resolve these conflicts first:\n  '
+                             + '\n  '.join(details))
     return normalizations
 
 
@@ -97,7 +166,9 @@ def main():
         raise ValueError('GNU Stow is required. Ubuntu: sudo apt install stow; macOS: brew install stow')
     home = Path.home()
     stow_packages = [package for package in packages if package != 'zen']
-    normalizations = preflight(stow_packages, home)
+    command = ['stow', '--dir', str(ROOT), '--target', str(home), '--no-folding',
+               '--delete' if args.delete else '--stow', *stow_packages]
+    normalizations = preflight(stow_packages, home, available, command)
     browser = [sys.executable, str(ROOT / 'scripts/link-zen.py')]
     if args.delete:
         browser.append('--delete')
@@ -111,8 +182,6 @@ def main():
         return
     normalize(normalizations)
     if stow_packages:
-        command = ['stow', '--dir', str(ROOT), '--target', str(home), '--no-folding',
-                   '--delete' if args.delete else '--stow', *stow_packages]
         subprocess.run(command + ['--simulate'], check=True)
         subprocess.run(command, check=True)
     if 'zen' in packages:

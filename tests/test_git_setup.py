@@ -152,6 +152,116 @@ class GitSetupTests(unittest.TestCase):
         self.assertIn(str(self.personal), selected.read_text())
         self.assertEqual(self.git('--global', '--get', 'alias.selected'), 'diff')
 
+    def work_identity(self, config):
+        work = self.home / 'work'
+        work.mkdir()
+        result = subprocess.run(['git', 'init', '--quiet', str(work)], env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        identity = self.home / 'work.inc'
+        identity.write_text('[user]\n  email = work@example.test\n')
+        config.write_text(f'[includeIf "gitdir:{work}/"]\n  path = {identity}\n')
+        return work
+
+    def email_at(self, directory):
+        result = subprocess.run(['git', '-C', str(directory), 'config', '--get', 'user.email'],
+                                env=self.env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.strip()
+
+    def test_conditional_identity_keeps_precedence(self):
+        work = self.work_identity(self.global_config)
+        original = self.global_config.read_bytes()
+        self.assertEqual(self.email_at(work), 'work@example.test')
+        self.apply()
+        self.assertEqual(self.email_at(work), 'work@example.test')
+        self.assertEqual(self.git('--global', '--get', 'user.email'), 'personal@example.test')
+        self.assertIn(original, self.global_config.read_bytes())
+
+    def test_nested_conditional_identity_keeps_precedence(self):
+        extra = self.home / 'extra.inc'
+        work = self.work_identity(extra)
+        original = extra.read_bytes()
+        self.global_config.write_text(f'[include]\n  path = {extra}\n')
+        self.apply()
+        self.assertEqual(self.email_at(work), 'work@example.test')
+        self.assertEqual(extra.read_bytes(), original)
+
+    def test_old_appended_managed_include_is_moved_before_conditional_identity(self):
+        work = self.work_identity(self.global_config)
+        self.personal.parent.mkdir(parents=True)
+        self.personal.write_text('[user]\n  name = Old Name\n  email = old@example.test\n')
+        self.git('--global', '--add', 'include.path', str(self.personal))
+        self.assertEqual(self.email_at(work), 'old@example.test')
+        self.apply()
+        self.assertEqual(self.email_at(work), 'work@example.test')
+        original = self.global_config.read_bytes()
+        self.apply()
+        self.assertEqual(self.global_config.read_bytes(), original)
+        self.assertEqual(self.git('--global', '--get-all', 'include.path').splitlines().count(str(self.personal)), 1)
+
+    def test_existing_explicit_identity_overrides_managed_defaults(self):
+        self.global_config.write_text('[user]\n  name = Host Name\n  email = host@example.test\n')
+        self.apply()
+        self.assertEqual(self.git('--global', '--get', 'user.name'), 'Host Name')
+        self.assertEqual(self.git('--global', '--get', 'user.email'), 'host@example.test')
+        self.assertEqual(self.git('--file', str(self.personal), '--get', 'user.email'),
+                         'personal@example.test')
+
+    def test_existing_identity_is_read_from_both_global_files(self):
+        self.env.pop('GIT_NAME')
+        self.env.pop('GIT_EMAIL')
+        xdg = self.home / '.config/git/config'
+        xdg.parent.mkdir(parents=True)
+        xdg.write_text('[user]\n  name = XDG Name\n  email = xdg@example.test\n')
+        self.global_config.write_text('[alias]\n  personal = status\n')
+        self.apply()
+        self.assertEqual(self.git('--file', str(self.personal), '--get', 'user.name'), 'XDG Name')
+        self.assertEqual(self.git('--file', str(self.personal), '--get', 'user.email'),
+                         'xdg@example.test')
+
+    def test_xdg_conditional_identity_keeps_precedence_with_both_global_files(self):
+        xdg = self.home / '.config/git/config'
+        xdg.parent.mkdir(parents=True)
+        work = self.work_identity(xdg)
+        self.global_config.write_text('[alias]\n  personal = status\n')
+        self.apply()
+        self.assertEqual(self.email_at(work), 'work@example.test')
+        self.assertEqual(self.email_at(self.home), 'personal@example.test')
+
+    def test_old_include_is_moved_from_home_to_existing_xdg_global(self):
+        xdg = self.home / '.config/git/config'
+        xdg.parent.mkdir(parents=True)
+        work = self.work_identity(xdg)
+        self.personal.write_text('[user]\n  name = Old Name\n  email = old@example.test\n')
+        self.global_config.write_text(f'[include]\n  path = {self.personal}\n')
+        self.apply()
+        self.assertEqual(self.email_at(work), 'work@example.test')
+        self.assertNotIn(str(self.personal), self.global_config.read_text())
+        self.assertIn(str(self.personal), xdg.read_text())
+
+    def test_invalid_xdg_global_is_validated_when_home_global_exists(self):
+        xdg = self.home / '.config/git/config'
+        xdg.parent.mkdir(parents=True)
+        xdg.write_text('[invalid\n')
+        original = '[alias]\n  personal = status\n'
+        self.global_config.write_text(original)
+        self.apply(success=False)
+        self.assertEqual(self.global_config.read_text(), original)
+        self.assertFalse(self.personal.exists())
+
+    def test_global_paths_pointing_to_one_file_keep_the_default_include(self):
+        xdg = self.home / '.config/git/config'
+        xdg.parent.mkdir(parents=True)
+        xdg.write_text('[alias]\n  personal = status\n')
+        self.global_config.symlink_to(xdg)
+        self.apply()
+        self.assertEqual(self.email_at(self.home), 'personal@example.test')
+        original = xdg.read_bytes()
+        self.apply()
+        self.assertEqual(xdg.read_bytes(), original)
+        self.assertTrue(self.global_config.is_symlink())
+
 
 if __name__ == '__main__':
     unittest.main()

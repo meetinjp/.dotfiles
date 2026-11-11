@@ -9,7 +9,7 @@ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
 fi
 [[ $# == 0 ]] || { echo "Unexpected argument: $1" >&2; exit 2; }
 git -C "$DOTFILES" submodule update --init agent-skills/caveman
-python3 "$DOTFILES/agent-skills/apply.py"
 "$DOTFILES/codex/apply.sh"
+python3 "$DOTFILES/agent-skills/apply.py"
 "$DOTFILES/claude/apply.sh"
 "$DOTFILES/install.sh" --profile agents

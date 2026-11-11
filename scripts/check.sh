@@ -3,6 +3,13 @@
 set -euo pipefail
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DOTFILES"
+for source in nvim/.config/nvim/init.lua agent-skills/caveman/skills/caveman/SKILL.md; do
+	if [[ ! -f "$source" ]]; then
+		echo "Missing check prerequisite: $source" >&2
+		echo "Run: git submodule update --init --recursive" >&2
+		exit 1
+	fi
+done
 shell_files=()
 while IFS= read -r -d '' file; do
 	[[ -f "$file" ]] || continue

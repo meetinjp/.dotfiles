@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,50 @@ class AgentSkillsTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
         return path
+
+    def setup_wrapper(self):
+        repository = self.home / 'checkout'
+        for relative in ['agent-skills/setup.sh', 'agent-skills/apply.py',
+                         'agent-skills/CAVEMAN.md', 'codex/apply.sh',
+                         'codex/AGENTS.md', 'claude/apply.sh']:
+            target = repository / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, target)
+        (repository / 'agent-skills/caveman').symlink_to(SKILLS.parent)
+        install = repository / 'install.sh'
+        install.write_text('#!/bin/sh\n[ "$*" = "--profile agents" ]\n')
+        install.chmod(0o755)
+        commands = self.home / 'bin'
+        commands.mkdir()
+        git = commands / 'git'
+        git.write_text('#!/bin/sh\nexit 0\n')
+        git.chmod(0o755)
+        env = dict(os.environ, HOME=str(self.home),
+                   CODEX_HOME=str(self.home / '.codex'),
+                   CODEX_DOTFILES_TARGET_DIR=str(self.home / '.codex'),
+                   CLAUDE_CONFIG_DIR=str(self.home / '.claude'),
+                   XDG_CONFIG_HOME=str(self.home / '.config'),
+                   PATH=f'{commands}:{os.environ["PATH"]}')
+        for _ in range(2):
+            result = subprocess.run(['bash', str(repository / 'agent-skills/setup.sh')],
+                                    env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_setup_wrapper_installs_base_guidance_before_caveman_merge(self):
+        self.setup_wrapper()
+        guide = (self.home / '.codex/AGENTS.md').read_text()
+        self.assertEqual(guide, (ROOT / 'codex/AGENTS.md').read_text())
+        self.assertIn('# Personal working agreements', guide)
+        self.assertEqual(guide.count('<!-- dotfiles:caveman:start -->'), 1)
+
+    def test_setup_wrapper_preserves_existing_personal_guidance(self):
+        original = '# My personal agreements\n\nKeep these exact instructions.\n'
+        guide = self.put('.codex/AGENTS.md', original)
+        self.setup_wrapper()
+        self.assertTrue(guide.read_text().startswith(original))
+        self.assertNotIn('# Personal working agreements', guide.read_text())
+        self.assertEqual(guide.read_text().count('<!-- dotfiles:caveman:start -->'), 1)
+        self.assertFalse(guide.is_symlink())
 
     def test_complete_family_is_discoverable_in_both_hosts(self):
         self.apply()

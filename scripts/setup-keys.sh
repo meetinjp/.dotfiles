@@ -3,8 +3,16 @@
 set -euo pipefail
 # shellcheck source=scripts/setup-common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/setup-common.sh"
-GIT_NAME="${GIT_NAME:-$(git config --global --includes user.name || true)}"
-GIT_EMAIL="${GIT_EMAIL:-$(git config --global --includes user.email || true)}"
+git_global_value() {
+	git config --global --includes --get "$1" 2>/dev/null && return
+	# --global selects only ~/.gitconfig when both global files exist. Git's
+	# normal lookup also reads the earlier XDG file; use it as the fallback.
+	if [[ -z "${GIT_CONFIG_GLOBAL:-}" && -e "$HOME/.gitconfig" ]]; then
+		git config --file "${XDG_CONFIG_HOME:-$HOME/.config}/git/config" --includes --get "$1" 2>/dev/null
+	fi
+}
+GIT_NAME="${GIT_NAME:-$(git_global_value user.name || true)}"
+GIT_EMAIL="${GIT_EMAIL:-$(git_global_value user.email || true)}"
 if [[ -z "$GIT_NAME" || -z "$GIT_EMAIL" ]]; then
 	echo "Configure identity first with ./setup.sh git." >&2
 	exit 1
@@ -63,11 +71,93 @@ else
 fi
 
 if [[ -n "${KEYID:-}" ]]; then
-	git config --global user.signingkey "$KEYID"
-	git config --global gpg.format openpgp
-	git config --global commit.gpgsign true
-	git config --global tag.gpgsign true
-	git config --global gpg.program "$GPG"
+	# Keep default signing settings before user includes so conditional profiles
+	# retain precedence. Validate the complete candidate before changing Git state.
+	python3 - "$KEYID" "$GPG" <<'PY'
+import os
+from pathlib import Path
+import stat
+import subprocess
+import sys
+import tempfile
+
+home = Path.home()
+xdg = Path(os.environ.get('XDG_CONFIG_HOME') or home / '.config') / 'git/config'
+if os.environ.get('GIT_CONFIG_GLOBAL'):
+    global_paths = [Path(os.environ['GIT_CONFIG_GLOBAL']).expanduser()]
+else:
+    global_paths = [path for path in (xdg, home / '.gitconfig')
+                    if path.exists() or path.is_symlink()] or [home / '.gitconfig']
+global_path = global_paths[0]
+target = global_path.resolve()
+target.parent.mkdir(parents=True, exist_ok=True)
+lock = target.with_name(target.name + '.lock')
+validation = None
+evaluation = None
+settings = {'user.signingkey': sys.argv[1], 'gpg.format': 'openpgp',
+            'commit.gpgsign': 'true', 'tag.gpgsign': 'true',
+            'gpg.program': sys.argv[2], 'gpg.openpgp.program': sys.argv[2]}
+
+
+def config(*arguments, env=None, allowed=(0,)):
+    result = subprocess.run(['git', 'config', *arguments], env=env,
+                            capture_output=True, text=True)
+    if result.returncode not in allowed:
+        raise ValueError(result.stderr.strip() or 'git config failed')
+    return result.stdout.rstrip('\n')
+
+
+try:
+    descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+except FileExistsError:
+    sys.exit(f'error: {lock} already exists; Git signing settings were not changed')
+try:
+    original = global_path.read_bytes() if global_path.exists() else b''
+    with os.fdopen(descriptor, 'wb') as stream:
+        stream.write(original)
+    for key in settings:
+        config('--file', str(lock), '--unset-all', key, allowed=(0, 5))
+    remainder = lock.read_bytes()
+    lock.write_bytes(b'')
+    for key, value in settings.items():
+        config('--file', str(lock), key, value)
+    with lock.open('ab') as stream:
+        stream.write(b'\n' + remainder)
+
+    # Git resolves relative includes against the logical config path, even when
+    # ~/.gitconfig is a symlink to a file in another directory.
+    global_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, name = tempfile.mkstemp(prefix='.dotfiles-signing-', dir=global_path.parent)
+    os.close(descriptor)
+    validation = Path(name)
+    validation.unlink()
+    validation.symlink_to(lock)
+    descriptor, name = tempfile.mkstemp(prefix='.dotfiles-signing-', dir=global_path.parent)
+    os.close(descriptor)
+    evaluation = Path(name)
+    # Normal Git lookup reads XDG first and ~/.gitconfig second. Evaluate both
+    # with the candidate substituted, without loading repository/system values.
+    for path in [validation, *global_paths[1:]]:
+        config('--file', str(evaluation), '--add', 'include.path', str(path.absolute()))
+    environment = dict(os.environ, GIT_CONFIG_GLOBAL=str(evaluation))
+    for key, value in settings.items():
+        if config('--global', '--includes', '--get', key, env=environment) != value:
+            raise ValueError('included signing settings override the selected OpenPGP key or program; '
+                             'reconcile those settings before rerunning; Git configuration was not changed')
+    current = global_path.read_bytes() if global_path.exists() else b''
+    if current != original:
+        raise ValueError('global Git configuration changed during setup; rerun without concurrent edits')
+    lock.chmod(stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600)
+    os.replace(lock, target)
+except (OSError, ValueError) as error:
+    sys.exit(f'error: {error}')
+finally:
+    if validation is not None:
+        validation.unlink(missing_ok=True)
+    if evaluation is not None:
+        evaluation.unlink(missing_ok=True)
+    lock.unlink(missing_ok=True)
+PY
 
 	# Add [A] authentication subkey if missing.
 	if ! "$GPG" --list-keys --with-colons "$KEYID" | awk -F: '$1=="sub" && $12 ~ /a/{found=1} END{exit !found}'; then

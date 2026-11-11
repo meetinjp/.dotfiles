@@ -17,9 +17,24 @@ def git_config(*arguments, allowed=(0,)):
     return result.stdout.rstrip('\n')
 
 
-def identity_value(variable, key, label):
-    value = os.environ.get(variable) or git_config('--global', '--includes', '--get', key,
-                                                allowed=(0, 1))
+def global_files(config_home):
+    selected = os.environ.get('GIT_CONFIG_GLOBAL')
+    if selected is not None:
+        return [Path(selected)]
+    candidates = [config_home / 'git/config', Path.home() / '.gitconfig']
+    # Git reads both files in this order, but --global queries only one of them.
+    return [path for path in candidates if path.exists() or path.is_symlink()] or [candidates[1]]
+
+
+def identity_value(variable, key, label, configs):
+    value = os.environ.get(variable)
+    if not value:
+        for config in configs:
+            existing = git_config('--file', str(config), '--includes', '--get', key,
+                                  allowed=(0, 1))
+            if existing:
+                value = existing
+    value = value or ''
     if not value.strip() and sys.stdin.isatty():
         value = input(f'{label}: ')
     if not value.strip():
@@ -46,20 +61,60 @@ def write_identity(path, values):
             temporary.unlink(missing_ok=True)
 
 
+def include_defaults(configs, personal):
+    # Generate the include with Git so paths containing quotes are escaped correctly.
+    with tempfile.TemporaryDirectory(prefix='dotfiles-git-include-') as directory:
+        header = Path(directory) / 'config'
+        git_config('--file', str(header), '--add', 'include.path', str(personal))
+        prefix = header.read_bytes()
+    seen = set()
+    for index, config in enumerate(configs):
+        target = config.resolve()
+        if target in seen:
+            continue
+        seen.add(target)
+        original = config.read_bytes() if config.exists() else b''
+        includes = git_config('--file', str(config), '--get-all', 'include.path',
+                              allowed=(0, 1)).splitlines()
+        count = includes.count(str(personal))
+        if index == 0 and original.startswith(prefix) and count == 1:
+            continue
+        if index > 0 and not count:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, name = tempfile.mkstemp(prefix=f'.{target.name}.', dir=target.parent)
+        temporary = Path(name)
+        try:
+            os.close(descriptor)
+            temporary.write_bytes(original)
+            # Move only our own include. Other includes and their order stay intact.
+            git_config('--file', str(temporary), '--fixed-value', '--unset-all',
+                       'include.path', str(personal), allowed=(0, 5))
+            content = (prefix if index == 0 else b'') + temporary.read_bytes()
+            temporary.write_bytes(content)
+            if target.exists():
+                temporary.chmod(target.stat().st_mode & 0o7777)
+            os.replace(temporary, target)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
     if not shutil.which('git'):
         raise ValueError('Git is required; install it and rerun')
 
+    config_home = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config')
+    configs = global_files(config_home)
     # Unlike --list, --get-regexp accepts a missing global config with status 1.
     # Validate all included settings before creating or changing any files.
-    git_config('--global', '--includes', '--get-regexp', '.', allowed=(0, 1))
-    name = identity_value('GIT_NAME', 'user.name', 'Git name')
-    email = identity_value('GIT_EMAIL', 'user.email', 'Git email')
+    for config in configs:
+        git_config('--file', str(config), '--includes', '--get-regexp', '.', allowed=(0, 1))
+    name = identity_value('GIT_NAME', 'user.name', 'Git name', configs)
+    email = identity_value('GIT_EMAIL', 'user.email', 'Git email', configs)
     work_email = os.environ.get('GIT_WORK_EMAIL', '')
 
-    config_home = Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config')
     personal = config_home / 'git/dotfiles'
     work = config_home / 'git/dotfiles-work'
     write_identity(personal, {'user.name': name, 'user.email': email})
@@ -67,13 +122,10 @@ def main():
         write_identity(work, {'user.email': work_email})
         print(f'Work identity saved to {work}; include it explicitly where needed.')
 
-    includes = git_config('--global', '--includes', '--path', '--get-all', 'include.path',
-                          allowed=(0, 1))
-    if str(personal) not in includes.splitlines():
-        # Git updates the selected global file atomically and follows an existing
-        # ~/.gitconfig symlink, retaining its target and unrelated configuration.
-        git_config('--global', '--add', 'include.path', str(personal))
-    print(f'Git identity configured through {personal}.')
+    # Updates are atomic and follow an existing ~/.gitconfig symlink, retaining
+    # its target and unrelated configuration. Existing identities take precedence.
+    include_defaults(configs, personal)
+    print(f'Git identity defaults configured through {personal}; existing settings take precedence.')
 
 
 if __name__ == '__main__':
