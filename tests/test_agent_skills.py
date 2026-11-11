@@ -67,6 +67,32 @@ class AgentSkillsTests(unittest.TestCase):
             self.assertEqual(path.read_text().count('<!-- dotfiles:caveman:start -->'), 1)
         self.assertEqual(list(self.home.rglob('*.bak.*')), [])
 
+    def test_duplicate_claude_plugins_are_disabled_without_losing_preferences(self):
+        original = {
+            'enabledPlugins': {'caveman@caveman': True, 'caveman@dotfiles': True,
+                               'personal@local': True, 'caveman@personal': True},
+            'editorMode': 'vim',
+            'permissions': {'allow': ['Read'], 'deny': ['Bash(rm:*)']},
+        }
+        path = self.put('.claude/settings.json', json.dumps(original) + '\n')
+        self.apply()
+        expected = dict(original, enabledPlugins=dict(original['enabledPlugins'],
+                        **{'caveman@caveman': False, 'caveman@dotfiles': False}))
+        self.assertEqual(json.loads(path.read_text()), expected)
+        before = path.read_bytes(), path.stat().st_mtime_ns
+        self.apply()
+        self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), before)
+
+    def test_claude_settings_are_not_created_or_reformatted_without_duplicates(self):
+        self.apply()
+        path = self.home / '.claude/settings.json'
+        self.assertFalse(path.exists())
+        original = '{ "editorMode" : "vim", "enabledPlugins" : {"personal@local": true} }\n'
+        path.write_text(original)
+        before = path.read_bytes(), path.stat().st_mtime_ns
+        self.apply()
+        self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), before)
+
     def test_conflicting_directory_and_broken_symlink_are_backed_up(self):
         original = self.put('.agents/skills/caveman-review/personal.txt', 'keep original directory')
         self.put('.agents/skills/caveman-review/SKILL.md', 'original skill')
@@ -90,6 +116,9 @@ class AgentSkillsTests(unittest.TestCase):
     def test_invalid_user_files_fail_before_installation(self):
         cases = [('invalid-json', '.config/caveman/config.json', '{'),
                  ('json-array', '.config/caveman/config.json', '[]'),
+                 ('invalid-claude-json', '.claude/settings.json', '{'),
+                 ('claude-json-array', '.claude/settings.json', '[]'),
+                 ('claude-plugin-array', '.claude/settings.json', '{"enabledPlugins": []}'),
                  ('bad-guidance', '.claude/CLAUDE.md', '<!-- dotfiles:caveman:start -->\n')]
         for label, relative, content in cases:
             with self.subTest(label=label):
@@ -102,6 +131,7 @@ class AgentSkillsTests(unittest.TestCase):
     def test_user_file_symlinks_and_permissions_are_preserved(self):
         for relative, body in [('.codex/AGENTS.md', '# My Codex rules\n'),
                                ('.claude/CLAUDE.md', '# My Claude rules\n'),
+                               ('.claude/settings.json', '{"enabledPlugins":{"caveman@caveman":true}}\n'),
                                ('.config/caveman/config.json', '{"custom":true}\n')]:
             target = self.put('personal/' + Path(relative).name, body)
             target.chmod(0o640)
@@ -109,7 +139,8 @@ class AgentSkillsTests(unittest.TestCase):
             link.parent.mkdir(parents=True, exist_ok=True)
             link.symlink_to(target)
         self.apply()
-        for relative in ['.codex/AGENTS.md', '.claude/CLAUDE.md', '.config/caveman/config.json']:
+        for relative in ['.codex/AGENTS.md', '.claude/CLAUDE.md', '.claude/settings.json',
+                         '.config/caveman/config.json']:
             path = self.home / relative
             self.assertTrue(path.is_symlink())
             self.assertEqual(path.stat().st_mode & 0o777, 0o640)

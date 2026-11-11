@@ -108,6 +108,18 @@ def main():
     # Both old and current upstream hooks recognize "ultra" as ultracave.
     settings['defaultMode'] = 'ultra'
 
+    claude_settings_path = claude / 'settings.json'
+    claude_settings = json.loads(claude_settings_path.read_text(encoding='utf-8')) if claude_settings_path.exists() else {}
+    if not isinstance(claude_settings, dict):
+        raise ValueError(f'{claude_settings_path} must contain a JSON object')
+    plugins = claude_settings.get('enabledPlugins', {})
+    if not isinstance(plugins, dict):
+        raise ValueError(f'{claude_settings_path}: enabledPlugins must contain a JSON object')
+    duplicates = [name for name in ('caveman@caveman', 'caveman@dotfiles')
+                  if name in plugins and plugins[name] is not False]
+    for name in duplicates:
+        plugins[name] = False
+
     linked = 0
     backups = home / '.agents/backups/caveman'
     for skill in skills:
@@ -121,6 +133,9 @@ def main():
     # Preserve formatting too when the managed value is already correct.
     if json.loads(raw_config).get('defaultMode') != settings['defaultMode']:
         write_text(config_path, json.dumps(settings, indent=2) + '\n')
+    if duplicates:
+        write_text(claude_settings_path, json.dumps(claude_settings, indent=2) + '\n')
+        print(f'Disabled duplicate Claude plugins: {", ".join(duplicates)}.')
     print(f'Caveman: {len(skills)} shared skills per host, {linked} links updated; default ultracave.')
 
 
