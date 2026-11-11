@@ -13,7 +13,7 @@ Changes and deletions propagate in both directions. Keep a separate backup.
   --dry-run, -n  Preview changes without copying or deleting files.
   --help, -h     Show this help.
 
-Before the first run, follow the Proton Drive section of ~/.dotfiles/README.md
+Before the first run, follow ~/.dotfiles/scripts/proton-drive/README.md
 to authenticate, create access markers, and initialize bisync manually.
 EOF
 }
@@ -39,7 +39,7 @@ sync_dir="$HOME/ProtonDrive"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/rclone/bisync"
 if [[ ! -d "$sync_dir" || ! -f "$sync_dir/RCLONE_TEST" ]]; then
 	echo "proton-sync: $sync_dir or its RCLONE_TEST access marker is missing." >&2
-	echo "Follow the Proton Drive initialization steps in ~/.dotfiles/README.md." >&2
+    echo "Follow the initialization steps in ~/.dotfiles/scripts/proton-drive/README.md." >&2
 	exit 1
 fi
 

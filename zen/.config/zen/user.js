@@ -8,9 +8,9 @@
  * Leaving VA-API at its default lets Zen use iGPU hardware video decode.
  *
  * Source: https://github.com/yokoffing/Betterfox (Peskyfox section).
- * The profile hash is per-install: install.sh resolves the active Zen
+ * The profile hash is per-install: scripts/link-zen.py resolves the active Zen
  * profile from ~/.config/zen/installs.ini + profiles.ini and symlinks the
- * stowed ~/.config/zen/user.js into <profile>/user.js (both Linux + macOS).
+ * repository source into <profile>/user.js (both Linux + macOS).
  ***************************************************************************/
 
 
