@@ -13,8 +13,9 @@ Run the read-only preflight first:
 ```
 
 The Linux target is Ubuntu and Ubuntu-derived distributions identified by
-`/etc/os-release`. The existing Ubuntu-derived desktop is verified; a clean
-stock Ubuntu installation has not been exercised end to end.
+`/etc/os-release`. Ubuntu 26.04.1 was exercised in a cloud-image VM, including
+config linking, repeat installs, and niri/Noctalia/Ghostty/Zen in a nested desktop.
+Physical hardware and display-manager login were not tested.
 
 The configured desktop uses the Qt/QML Noctalia shell. Its compatible pins are
 `noctalia-qs v0.0.12`, Noctalia `v4.7.7`, and niri `v26.04`. The engine needs
@@ -34,10 +35,16 @@ Do not replace the pinned shell with an unrelated latest release.
 ```
 
 Provisioning keeps existing commands where possible. It installs apt packages,
-Ghostty/keyd repositories, Rust tools, niri, a compatible Noctalia engine and
-shell, browsers, and development runtimes. Some optional tool failures produce
+the Ghostty repository, Ubuntu's keyd package, Rust tools, niri, a compatible
+Noctalia engine and shell, browsers, and development runtimes. Starship installs
+into `~/.local/bin` without sudo. Some optional tool failures produce
 warnings; review those warnings before treating the workstation as complete.
 Version pins are at the top of `provision.sh`.
+
+Large niri and Noctalia engine builds use `/var/tmp` instead of memory-backed
+`/tmp`, unless you set `TMPDIR`. Allow several GB of disk space. Validation used
+8 GiB RAM and four virtual CPUs, with `CARGO_BUILD_JOBS=2` and
+`CMAKE_BUILD_PARALLEL_LEVEL=3` to limit build parallelism.
 
 Select the Niri session in your existing display manager. Provisioning leaves
 hardware drivers, firmware, display-manager choice, and CPU/fan/battery policy

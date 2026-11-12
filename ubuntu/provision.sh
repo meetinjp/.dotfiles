@@ -97,6 +97,8 @@ install_noctalia_shell() {
 install_noctalia() {
 	check_noctalia_requirements || return 1
 	if ! noctalia_engine_ready; then
+		# Ubuntu may mount /tmp in RAM; keep large builds on disk by default.
+		local -x TMPDIR="${TMPDIR:-/var/tmp}"
 		local stage
 		stage="$(mktemp -d)" || return 1
 		log "Building noctalia-qs $NOCTALIA_QS_TAG."
@@ -115,6 +117,22 @@ install_noctalia() {
 		noctalia_engine_ready || { warn "Installed noctalia-qs is not available on PATH."; return 1; }
 	fi
 	install_noctalia_shell
+}
+
+install_keyd() {
+	if have keyd || have keyd.rvaiya; then
+		log "keyd already installed."
+		return 0
+	fi
+	log "installing keyd from Ubuntu packages…"
+	sudo apt-get install -y keyd
+}
+
+install_starship() {
+	have starship && { log "starship already installed."; return 0; }
+	log "installing starship…"
+	mkdir -p "$HOME/.local/bin" || return 1
+	curl -fsS https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
 }
 
 # Sourcing exposes the compatibility and installer functions without provisioning.
@@ -177,7 +195,7 @@ if have fdfind && ! have fd; then
 	log "linked fd → fdfind"
 fi
 
-# ── 2. PPAs: ghostty, keyd (niri is built from source — see § 3b below) ─────
+# ── 2. Ghostty PPA and Ubuntu keyd package (niri is built in § 3b) ────────
 add_ppa() {  # add_ppa <ppa> <apt-pkg> [check-cmd]
 	local ppa="$1" pkg="$2" check="${3:-$2}"
 	have "$check" && { log "$pkg already installed."; return; }
@@ -187,10 +205,10 @@ add_ppa() {  # add_ppa <ppa> <apt-pkg> [check-cmd]
 	sudo apt-get install -y "$pkg" || warn "$pkg install failed"
 }
 add_ppa ppa:mkasberg/ghostty-ubuntu ghostty
-# keyd: the keyd-team PPA installs the binary as `keyd.rvaiya` (the service is
-# still `keyd`). setup.sh step 6 detects either name and writes
-# /etc/keyd/default.conf, then restarts the keyd service.
-add_ppa ppa:keyd-team/ppa keyd keyd.rvaiya
+# Ubuntu's keyd package may name the binary `keyd.rvaiya` (service: `keyd`).
+# setup.sh step 6 detects either name, writes /etc/keyd/default.conf, and
+# restarts the service. No extra repository is needed for this package.
+install_keyd || warn "keyd install failed; check Ubuntu package availability"
 
 # ── 3. Rust toolchain (for cargo-built tools + niri source fallback) ────────
 if ! have rustup; then
@@ -309,7 +327,8 @@ fi
 build_niri() {
 	have niri && { log "niri already installed."; return; }
 	have cargo || { warn "cargo missing — cannot build niri"; return; }
-	local d; d="$(mktemp -d)"
+	local -x TMPDIR="${TMPDIR:-/var/tmp}"
+	local d; d="$(mktemp -d)" || return 1
 	log "building niri ${NIRI_TAG} from source (a few minutes)…"
 	if git clone --depth 1 --branch "$NIRI_TAG" https://github.com/YaLTeR/niri.git "$d/niri" \
 		&& cargo build --release --locked --manifest-path "$d/niri/Cargo.toml"; then
@@ -329,10 +348,7 @@ build_niri() {
 build_niri
 
 # ── 4. starship prompt ──────────────────────────────────────────────────────
-if ! have starship; then
-	log "installing starship…"
-	curl -sS https://starship.rs/install.sh | sh -s -- -y || warn "starship install failed"
-fi
+install_starship || warn "starship install failed"
 
 # ── 5. FiraCode Nerd Font (apt fonts-firacode has no Nerd glyphs) ───────────
 if ! fc-list 2>/dev/null | grep -qi 'FiraCode Nerd Font'; then

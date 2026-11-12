@@ -154,6 +154,113 @@ exit 2
         self.assertNotIn('unexpected build or system operation', result.stderr)
         self.assertFalse((self.home / '.config').exists())
 
+    def prepare_source_build(self):
+        (self.bin / 'qs').unlink()
+        self.command('qmake6', "printf 'Using Qt version 6.8.3 in /qt\\n'\n")
+        # Stop at the download boundary, recording the build's environment.
+        self.command('git', 'printf "%s\\n" "$TMPDIR" > "$HOME/build-temp-root"\nexit 1\n')
+
+    def test_source_build_defaults_to_disk_backed_temp(self):
+        self.prepare_source_build()
+        self.env.pop('TMPDIR', None)
+        # Observe mktemp's environment without writing outside the test home.
+        self.command('mktemp', '''
+printf '%s\n' "$TMPDIR" > "$HOME/mktemp-root"
+exec /usr/bin/mktemp -d "$HOME/build.XXXXXXXX"
+''')
+        result = self.call()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.home / 'mktemp-root').read_text(), '/var/tmp\n')
+        self.assertEqual((self.home / 'build-temp-root').read_text(), '/var/tmp\n')
+        self.assertEqual(list(self.home.glob('build.*')), [])
+
+    def test_source_build_honors_explicit_temp_directory(self):
+        self.prepare_source_build()
+        custom = self.home / 'custom build temp'
+        custom.mkdir()
+        self.env['TMPDIR'] = str(custom)
+        result = self.call()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.home / 'build-temp-root').read_text(), f'{custom}\n')
+        self.assertEqual(list(custom.iterdir()), [])
+
+
+@unittest.skipUnless(os.name == 'posix' and shutil.which('bash'), 'Bash required.')
+class ToolProvisionTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='ubuntu tool provisioning ')
+        self.addCleanup(self.temp.cleanup)
+        self.home = Path(self.temp.name)
+        self.bin = self.home / 'bin'
+        self.bin.mkdir()
+        self.env = dict(os.environ, HOME=str(self.home), PATH=f'{self.bin}:/usr/bin:/bin')
+        self.command('sudo', '''
+printf '%s\n' "$@" > "$HOME/system-arguments"
+exit "${PROVISION_TEST_APT_EXIT:-0}"
+''')
+
+    def command(self, name, body):
+        path = self.bin / name
+        path.write_text('#!/bin/sh\n' + body)
+        path.chmod(0o755)
+
+    def call(self, function):
+        # Installed tool detection must not depend on the test host's tools.
+        return subprocess.run(['bash', '-c', '''
+source "$1"
+have() { [[ -x "$HOME/bin/$1" ]]; }
+''' + function, 'tool-test', str(SCRIPT)], env=self.env,
+                              capture_output=True, text=True, timeout=10)
+
+    def test_keyd_installs_native_package_without_adding_repository(self):
+        result = self.call('install_keyd')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.home / 'system-arguments').read_text().splitlines(),
+                         ['apt-get', 'install', '-y', 'keyd'])
+
+    def test_keyd_preserves_either_existing_binary(self):
+        for name in ['keyd', 'keyd.rvaiya']:
+            with self.subTest(name=name):
+                self.command(name, 'exit 0\n')
+                result = self.call('install_keyd')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertFalse((self.home / 'system-arguments').exists())
+                (self.bin / name).unlink()
+
+    def test_missing_keyd_package_reports_failure_without_ppa_fallback(self):
+        self.env['PROVISION_TEST_APT_EXIT'] = '100'
+        result = self.call('install_keyd')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.home / 'system-arguments').read_text().splitlines(),
+                         ['apt-get', 'install', '-y', 'keyd'])
+
+    def test_starship_installs_in_user_bin_without_sudo_or_terminal(self):
+        self.command('curl', '''
+cat <<'INSTALLER'
+[ "$#" -eq 3 ] && [ "$1" = -y ] && [ "$2" = -b ] || exit 2
+printf '#!/bin/sh\nexit 0\n' > "$3/starship"
+chmod +x "$3/starship"
+INSTALLER
+''')
+        result = self.call('install_starship')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(os.access(self.home / '.local/bin/starship', os.X_OK))
+        self.assertFalse((self.home / 'system-arguments').exists())
+
+    def test_starship_preserves_existing_installation(self):
+        self.command('starship', 'exit 0\n')
+        self.command('curl', 'exit 99\n')
+        result = self.call('install_starship')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / '.local').exists())
+        self.assertFalse((self.home / 'system-arguments').exists())
+
+    def test_starship_download_failure_is_reported(self):
+        self.command('curl', 'exit 22\n')
+        result = self.call('install_starship')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.home / '.local/bin/starship').exists())
+
 
 if __name__ == '__main__':
     unittest.main()
