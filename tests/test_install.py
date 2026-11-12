@@ -260,6 +260,8 @@ with patch.object(sys, 'platform', 'darwin'):
         self.assertEqual(self.snapshot(self.checkout), source_before)
 
     def test_nested_metadata_conflicts_are_reported_before_normalization(self):
+        # These files must be managed regardless of the Stow version's defaults.
+        (self.checkout / 'tmux/.stow-local-ignore').write_text('')
         for relative in ['.config/tmux/.gitattributes', '.config/tmux/.gitmodules',
                          '.config/tmux/README.md', '.config/tmux/LICENSE']:
             with self.subTest(relative=relative):
