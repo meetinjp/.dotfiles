@@ -147,6 +147,11 @@ switch-events {
     lid-close {
         spawn "qs" "-c" "noctalia-shell" "ipc" "call" "lockScreen" "lock"
     }
+    // Resume race: niri can disable eDP-1 on wake (stale lid state, lid
+    // device is not SW_LID compliant) and never re-enable it. Force it on.
+    lid-open {
+        spawn "niri" "msg" "output" "eDP-1" "on"
+    }
 }
 
 // Workspaces are dynamic per-monitor stacks (niri default). No persistent
