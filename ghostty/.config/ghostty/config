@@ -6,6 +6,8 @@
 # ─── Font ────────────────────────────────────────────────────────────────────
 font-family = FiraCode Nerd Font Mono
 font-size = 16
+# New tabs/splits start at font-size instead of copying the current zoom.
+window-inherit-font-size = false
 # Ligatures off (matches your old WezTerm setup which mirrored kitty).
 font-feature = -calt
 font-feature = -clig
@@ -119,6 +121,9 @@ keybind = ctrl+7=goto_tab:7
 keybind = ctrl+8=goto_tab:8
 keybind = ctrl+9=goto_tab:9
 keybind = f11=toggle_fullscreen
+# reset_font_size returns to the size a surface started with (an inherited
+# zoom), so pin ctrl+0 to the configured size instead.
+keybind = ctrl+0=set_font_size:16
 
 # ─── Optional per-host overrides ─────────────────────────────────────────────
 # `?` prefix makes the include optional (no error if file is missing).
