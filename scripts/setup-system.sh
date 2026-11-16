@@ -159,6 +159,27 @@ EOF
 		echo "  wrote $OOMD_DROPIN_FILE"
 	fi
 fi
+
+# zram: compressed swap in RAM. Takes priority over disk swap, so swapping
+# costs a decompress instead of a disk read; high swappiness then moves idle
+# pages out early instead of in late, laggy bursts.
+ZRAM_CONF=/etc/systemd/zram-generator.conf
+ZRAM_SYSCTL=/etc/sysctl.d/99-zram.conf
+if ! is_ubuntu; then
+	echo "  zram setup supports Ubuntu only — skipping."
+elif cmp -s "$DOTFILES/zram/zram-generator.conf" "$ZRAM_CONF" \
+	&& cmp -s "$DOTFILES/zram/99-zram.conf" "$ZRAM_SYSCTL" \
+	&& dpkg -s systemd-zram-generator &>/dev/null; then
+	echo "  zram swap already configured."
+elif confirm "Configure zram swap (zstd, ram/2) and vm.swappiness=150? (needs sudo) [Y/n]"; then
+	dpkg -s systemd-zram-generator &>/dev/null || sudo apt-get install -y systemd-zram-generator
+	sudo install -m 0644 -o root -g root "$DOTFILES/zram/zram-generator.conf" "$ZRAM_CONF"
+	sudo install -m 0644 -o root -g root "$DOTFILES/zram/99-zram.conf" "$ZRAM_SYSCTL"
+	sudo systemctl daemon-reload
+	sudo systemctl restart systemd-zram-setup@zram0.service
+	sudo sysctl -q -p "$ZRAM_SYSCTL"
+	echo "  zram swap active: $(swapon --show=NAME,SIZE --noheadings | grep zram || echo 'check swapon --show')"
+fi
 fi
 
 # ---------------------------------------------------------------------------

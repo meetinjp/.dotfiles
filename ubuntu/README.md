@@ -65,5 +65,5 @@ its INI metadata. Launch Zen once if no profile exists. An unmanaged `user.js`
 is preserved; review and move it yourself before applying the managed file.
 
 `./setup.sh system` optionally configures locale, Caps Lock, zsh, memory-pressure
-handling, and sudo feedback. It is never run by config installation. Noninteractive
+handling (systemd-oomd, zram swap with `vm.swappiness=150`), and sudo feedback. It is never run by config installation. Noninteractive
 prompts skip changes unless `DOTFILES_YES=1` is explicitly supplied.
