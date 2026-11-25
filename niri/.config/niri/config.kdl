@@ -200,6 +200,7 @@ binds {
     Mod+Space            hotkey-overlay-title="App launcher"    { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
     Mod+Shift+Q          hotkey-overlay-title="Session menu"    { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
     Mod+Escape           allow-when-locked=true                 { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
+    Mod+Shift+Escape     hotkey-overlay-title="Suspend"         { spawn "systemctl" "suspend"; }
 
     // Session — quit only via Ctrl+Alt+Delete (no easy mis-hit combo).
     Mod+C                { close-window; }
