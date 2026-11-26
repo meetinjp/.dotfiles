@@ -13,7 +13,7 @@ unset _brew
 # The niri session is launched by a login, non-interactive shell (niri-session →
 # `exec -l "$SHELL"` / `exec niri --session`), which sources THIS file but never
 # .zshrc — so without this, GUI apps niri spawns that live under ~/.local/bin
-# (e.g. `zen-browser`) or ~/.cargo/bin are not found and silently fail to start.
+# (e.g. `brave-browser`) or ~/.cargo/bin are not found and silently fail to start.
 # Idempotent; rustup's ~/.zshenv already adds ~/.cargo/bin, we just guarantee it.
 for _d in "$HOME/.local/bin" "$HOME/.cargo/bin"; do
     case ":$PATH:" in *":$_d:"*) ;; *) [[ -d "$_d" ]] && PATH="$_d:$PATH" ;; esac

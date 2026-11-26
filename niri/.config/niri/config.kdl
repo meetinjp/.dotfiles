@@ -129,14 +129,14 @@ window-rule {
     open-maximized true
 }
 
-// ── Zen Browser ──
+// ── Brave Browser ──
 // clip-to-geometry strips the CSD corner halos; at-startup → ws2 fullscreen.
 window-rule {
-    match app-id="^zen$"
+    match app-id="^brave-browser$"
     clip-to-geometry true
 }
 window-rule {
-    match app-id="^zen$" at-startup=true
+    match app-id="^brave-browser$" at-startup=true
     open-on-workspace "2"
     open-fullscreen true
 }
@@ -158,14 +158,14 @@ switch-events {
 // declarations — `Mod+N` targets the Nth ws of the currently focused
 // monitor. Moving a workspace between monitors renumbers it into the
 // destination's stack. The at-startup window-rules below still place
-// ghostty + zen on ws1 + ws2 because niri auto-creates them on the
+// ghostty + brave on ws1 + ws2 because niri auto-creates them on the
 // focused monitor at spawn time.
 
 // ─── SPAWN AT STARTUP ────────────────────────────────────────────────────────
 // Noctalia covers bar + launcher + notifications + lock + polkit + wallpaper.
 // xwayland-satellite handles X11 apps. kanshi manages multi-monitor.
 // wlsunset warms the display color temperature after sunset.
-// Ghostty + Zen auto-launch and land in their workspaces (rules below).
+// Ghostty + Brave auto-launch and land in their workspaces (rules below).
 
 // Push Wayland env into the systemd user manager + dbus activation env so
 // xdg-desktop-portal-gnome (screencast for Loom/OBS/Meet) sees WAYLAND_DISPLAY
@@ -184,7 +184,7 @@ spawn-at-startup "xwayland-satellite"
 // propagates cmd's exit code when skip is unset (so real spawn failures
 // still surface in niri's log).
 spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || ghostty"
-spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || zen-browser"
+spawn-sh-at-startup "[ -n \"$NIRI_SKIP_APPS\" ] || brave-browser"
 
 // ─── KEYBINDINGS ─────────────────────────────────────────────────────────────
 // Mod = Super (niri's default; set explicitly via mod-key above).
