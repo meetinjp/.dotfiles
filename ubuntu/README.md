@@ -60,10 +60,6 @@ rates, positions, and scaling. Review both before using another machine.
 After editing display profiles, run `pkill -HUP -u "$(id -u)" -x kanshi`. Niri live-reloads its
 own configuration; validate it first with `niri validate`.
 
-Zen preferences are linked into an existing default profile discovered from
-its INI metadata. Launch Zen once if no profile exists. An unmanaged `user.js`
-is preserved; review and move it yourself before applying the managed file.
-
 `./setup.sh system` optionally configures locale, Caps Lock, zsh, memory-pressure
 handling (systemd-oomd, zram swap with `vm.swappiness=150`), and sudo feedback. It is never run by config installation. Noninteractive
 prompts skip changes unless `DOTFILES_YES=1` is explicitly supplied.

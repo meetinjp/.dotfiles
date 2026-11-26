@@ -196,15 +196,10 @@ def main():
     home = Path.home()
     # Resolve the directory container, leaving managed file symlinks unresolved.
     stow_home = home.resolve()
-    stow_packages = [package for package in packages if package != 'zen']
+    stow_packages = packages
     command = ['stow', '--dir', str(ROOT), '--target', str(stow_home), '--no-folding',
                '--delete' if args.delete else '--stow', *stow_packages]
     normalizations = preflight(stow_packages, stow_home, available, command)
-    browser = [sys.executable, str(ROOT / 'scripts/link-zen.py')]
-    if args.delete:
-        browser.append('--delete')
-    if 'zen' in packages:
-        subprocess.run(browser + ['--dry-run'], check=True)
     action = 'remove' if args.delete else 'link'
     print(f"{'Would' if args.dry_run else 'Will'} {action}: {', '.join(packages)}", flush=True)
     if normalizations:
@@ -215,8 +210,6 @@ def main():
     if stow_packages:
         subprocess.run(command + ['--simulate'], check=True)
         subprocess.run(command, check=True)
-    if 'zen' in packages:
-        subprocess.run(browser, check=True)
     if sys.platform == 'darwin' and 'ghostty' in packages:
         # Ghostty reads this platform layer after its shared XDG config.
         target = home / 'Library/Application Support/com.mitchellh.ghostty/config'

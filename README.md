@@ -37,7 +37,7 @@ personal configurations or reverse separately requested setup tasks.
 | Profile | Contents |
 | --- | --- |
 | `core` | Ghostty, Neovim, Prettier, ripgrep, Starship, tmux, zsh |
-| `desktop` | Core plus Linux helpers, niri, kanshi, user units, Zen preferences |
+| `desktop` | Core plus Linux helpers, niri, kanshi, user units |
 | `macos` | Core plus Ruby configuration |
 | `agents` | Personal Claude skills; shared Caveman setup is separate |
 

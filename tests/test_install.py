@@ -20,7 +20,7 @@ class InstallTests(unittest.TestCase):
         self.home.mkdir()
         self.checkout = self.root / 'projects/personal dotfiles'
         (self.checkout / 'scripts').mkdir(parents=True)
-        for name in ['install.sh', 'scripts/link.py', 'scripts/link-zen.py']:
+        for name in ['install.sh', 'scripts/link.py']:
             shutil.copy2(ROOT / name, self.checkout / name)
         (self.checkout / 'profiles').mkdir()
         for name, content in {'core': 'zsh\ntmux\n', 'desktop': 'bin\n',

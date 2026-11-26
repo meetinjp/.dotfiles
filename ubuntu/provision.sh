@@ -395,43 +395,9 @@ EOF
 	fi
 fi
 
-# ── 8. Zen browser (per-user installation) ─────────────────────────────────
-if [[ ! -x "$HOME/.local/bin/zen" ]]; then
-	log "installing Zen browser (per-user)…"
-	curl -fsSL https://github.com/zen-browser/updates-server/raw/refs/heads/main/install.sh | bash \
-		|| warn "Zen install failed"
-fi
-# The niri config spawns `zen-browser`, but the per-user tarball installs the
-# binary as `zen`. Provide the command name used by the desktop config.
-if [[ -x "$HOME/.local/bin/zen" && ! -e "$HOME/.local/bin/zen-browser" ]]; then
-	ln -sfn zen "$HOME/.local/bin/zen-browser"
-	log "linked zen-browser → zen"
-fi
-# The Zen tarball writes a launcher with a literal `Exec=$HOME/...` (the desktop
-# spec does NOT expand $HOME, so launchers like Noctalia can't run it) and no
-# StartupWMClass — so every Zen window spawns a throwaway userapp-Zen-*.desktop,
-# and you end up with several dead "Zen Browser" entries. Patch Exec to an
-# absolute path + %u, add StartupWMClass=zen, and clear the auto-gen dupes.
-ZEN_DESKTOP="$HOME/.local/share/applications/zen.desktop"
-if [[ -f "$ZEN_DESKTOP" ]]; then
-	sed -i -e 's#^Exec=\$HOME/#Exec='"$HOME"'/#' -e 's#^Exec=\(.*/zen\)$#Exec=\1 %u#' "$ZEN_DESKTOP"
-	grep -q '^StartupWMClass=' "$ZEN_DESKTOP" || printf 'StartupWMClass=zen\n' >> "$ZEN_DESKTOP"
-	# Register Zen as an http/https handler (the tarball's .desktop omits MimeType,
-	# so it never counts as a browser for xdg).
-	grep -q '^MimeType=' "$ZEN_DESKTOP" || printf 'MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;\n' >> "$ZEN_DESKTOP"
-	rm -f "$HOME"/.local/share/applications/userapp-Zen-*.desktop
-	have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
-	# Make Zen the actual default browser. xdg-settings sets the desktop default,
-	# but the per-scheme handlers (http/https/text-html) are independent and on
-	# existing desktops may retain a different browser unless set explicitly.
-	have xdg-settings && xdg-settings set default-web-browser zen.desktop 2>/dev/null || true
-	have xdg-mime && xdg-mime default zen.desktop x-scheme-handler/http x-scheme-handler/https text/html 2>/dev/null || true
-	log "patched zen.desktop + set Zen as default browser"
-fi
-
-# ── 8b. Brave browser (official apt repo, release channel) ──────────────────
-# Work browser, installed alongside Zen (Zen stays the default). Keyring and
-# deb822 .sources are fetched verbatim from Brave's own install docs.
+# ── 8. Brave browser (official apt repo, release channel) ───────────────────
+# Default browser. Keyring and deb822 .sources are fetched verbatim from
+# Brave's own install docs.
 if ! have brave-browser; then
 	log "installing brave-browser (official repo)…"
 	if sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
@@ -443,6 +409,13 @@ if ! have brave-browser; then
 	else
 		warn "Brave keyring/sources fetch failed"
 	fi
+fi
+# Make Brave the default browser. xdg-settings sets the desktop default, but the
+# per-scheme handlers (http/https/text-html) are independent and on existing
+# desktops may retain a different browser unless set explicitly.
+if have brave-browser; then
+	have xdg-settings && xdg-settings set default-web-browser brave-browser.desktop 2>/dev/null || true
+	have xdg-mime && xdg-mime default brave-browser.desktop x-scheme-handler/http x-scheme-handler/https text/html 2>/dev/null || true
 fi
 
 # ── 9. uv / pyenv / nvm / bun (per-user runtime managers; cross-distro) ─────
