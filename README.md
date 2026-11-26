@@ -70,6 +70,7 @@ Existing hardware drivers, display managers, and power policy remain OS-owned.
 - [Agent tools](agent-skills/README.md): shared skills and Codex/Claude preferences.
 - [Noctalia settings and sleep protection](noctalia/README.md): separately enabled.
 - [Proton Drive](scripts/proton-drive/README.md): deliberate two-way folder sync.
+- [OneDrive](scripts/onedrive/README.md): two-way sync for one work folder.
 
 ## Maintain
 
