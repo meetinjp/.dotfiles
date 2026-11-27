@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the shared agent skills and reconcile the Caveman global defaults."""
+"""Install the shared agent skills and reconcile their global output defaults."""
 
 import argparse
 import json
@@ -18,11 +18,12 @@ SOURCES = ('caveman', 'i-have-adhd')
 START = '<!-- dotfiles:caveman:start -->'
 END = '<!-- dotfiles:caveman:end -->'
 GUIDANCE = f'''{START}
-# Caveman defaults
+# Agent output defaults
 
-Start each new session in `ultracave` mode. Read `~/.agents/CAVEMAN.md` and
-follow its skill instructions. Honor explicit mode changes, including
-`stop caveman` and `normal mode`, for the rest of the session.
+Start each new session in `ultracave` mode with `i-have-adhd` also on. Read
+`~/.agents/CAVEMAN.md` and follow its skill instructions. Honor explicit mode
+changes, including `stop caveman`, `stop adhd mode`, and `normal mode`, for the
+rest of the session.
 {END}'''
 
 
@@ -152,7 +153,8 @@ def main():
     if duplicates:
         write_text(claude_settings_path, json.dumps(claude_settings, indent=2) + '\n')
         print(f'Disabled duplicate Claude plugins: {", ".join(duplicates)}.')
-    print(f'Agent skills: {len(skills)} shared skills per host, {linked} links updated; default ultracave.')
+    print(f'Agent skills: {len(skills)} shared skills per host, {linked} links updated; '
+          'default styles: ultracave, i-have-adhd.')
 
 
 if __name__ == '__main__':

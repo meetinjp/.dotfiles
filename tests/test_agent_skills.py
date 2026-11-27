@@ -123,8 +123,22 @@ class AgentSkillsTests(unittest.TestCase):
                 self.assertEqual((self.home / directory / name).resolve(), sources[name])
         self.assertEqual(len(list((self.home / '.claude/agents').glob('cavecrew-*.md'))), 3)
         for relative in ['.codex/AGENTS.md', '.claude/CLAUDE.md']:
-            self.assertIn('`ultracave`', (self.home / relative).read_text())
-        self.assertTrue((self.home / '.agents/CAVEMAN.md').is_file())
+            guide = (self.home / relative).read_text()
+            self.assertIn('`ultracave`', guide)
+            self.assertIn('`i-have-adhd`', guide)
+            self.assertIn('`stop adhd mode`', guide)
+        shared = (self.home / '.agents/CAVEMAN.md').read_text()
+        for name in ['ultracave', 'i-have-adhd']:
+            skill = f'~/.agents/skills/{name}/SKILL.md'
+            self.assertIn(skill, shared)
+            self.assertTrue((self.home / skill.removeprefix('~/')).is_file())
+        # Compare words, not line wrapping, so prose can be reflowed freely.
+        words = ' '.join(shared.split())
+        for rule in ['`stop adhd mode` disables only `i-have-adhd`',
+                     '`normal mode` disables both',
+                     'apply only the `ultracave` voice to delegated work',
+                     'omits the `i-have-adhd` structure']:
+            self.assertIn(rule, words)
 
     def test_existing_guidance_and_configuration_survive_reruns(self):
         original = '# Personal rules\n\nKeep my exact prose.\n'
