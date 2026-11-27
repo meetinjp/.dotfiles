@@ -7,14 +7,15 @@ Agent setup is optional and separate from configuration linking:
 ```
 
 Install Codex and/or Claude Code separately through their official installers.
-This setup initializes the pinned Caveman submodule, links its 22 shared skills
-into `~/.agents/skills/` and `~/.claude/skills/`, and links three Claude agent
-presets. Both agents use the same upstream source. Personal Claude skills have
-an additional Stow package.
+This setup initializes the pinned Caveman and i-have-adhd submodules, links
+their 23 shared skills into `~/.agents/skills/` and `~/.claude/skills/`, and
+links three Claude agent presets. Both agents use the same upstream sources.
+Personal Claude skills have an additional Stow package.
 
-The submodule records the same upstream revision previously vendored here:
-`d262ab3882952a59312ff3537cd86d894523c5ab`. Upstream code and licensing stay in
-that repository; this checkout records one gitlink rather than copied skill files.
+The Caveman submodule records the same upstream revision previously vendored
+here: `d262ab3882952a59312ff3537cd86d894523c5ab`. Upstream code and licensing
+stay in that repository; this checkout records one gitlink rather than copied
+skill files.
 
 Global guidance starts new sessions in ultracave mode. Say `normal mode` or
 `stop caveman` to change the current session. Existing personal guidance and
@@ -32,6 +33,17 @@ For an isolated check, pass `--home /tmp/caveman-check`. This standalone skill
 installer also supports Windows with Python and symlink privileges; the desktop
 installer targets Ubuntu and macOS.
 
-To update Caveman, select and review an upstream revision inside the submodule,
-run `python3 -m unittest discover -s tests -p test_agent_skills.py -v`, then commit
-the updated gitlink. Keep this revision shared across agents.
+The [i-have-adhd](https://github.com/ayghri/i-have-adhd) skill is on demand
+only: type `/i-have-adhd` in Claude Code or `$i-have-adhd` in Codex, and say
+`stop adhd mode` to end it. Its upstream plugin and always-on hook are not
+installed; existing native plugin entries are disabled, as for Caveman, so the
+skill is not exported twice. Skill names must be unique across both sources.
+
+To update Caveman or i-have-adhd, select and review an upstream revision inside
+its submodule, then run both agent configuration test files:
+
+```sh
+python3 -m unittest tests.test_agent_skills tests.test_codex_config -v
+```
+
+Then commit the updated gitlink. Keep each revision shared across agents.

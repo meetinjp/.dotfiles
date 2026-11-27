@@ -11,6 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'agent-skills/apply.py'
 SKILLS = ROOT / 'agent-skills/caveman/skills'
+ADHD_SKILLS = ROOT / 'agent-skills/i-have-adhd/skills'
 
 
 class AgentSkillsTests(unittest.TestCase):
@@ -40,6 +41,7 @@ class AgentSkillsTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
         (repository / 'agent-skills/caveman').symlink_to(SKILLS.parent)
+        (repository / 'agent-skills/i-have-adhd').symlink_to(ADHD_SKILLS.parent)
         install = repository / 'install.sh'
         install.write_text('#!/bin/sh\n[ "$*" = "--profile agents" ]\n')
         install.chmod(0o755)
@@ -108,15 +110,17 @@ class AgentSkillsTests(unittest.TestCase):
 
     def test_complete_family_is_discoverable_in_both_hosts(self):
         self.apply()
-        expected = {path.parent.name for path in SKILLS.glob('*/SKILL.md')}
-        self.assertEqual(len(expected), 22)
+        sources = {path.parent.name: path.parent
+                   for root in (SKILLS, ADHD_SKILLS) for path in root.glob('*/SKILL.md')}
+        expected = set(sources)
+        self.assertEqual(len(expected), 23)
         self.assertTrue({'caveman-review', 'caveman-commit', 'caveman-help',
-                         'caveman', 'ultracave', 'megacave'} <= expected)
+                         'caveman', 'ultracave', 'megacave', 'i-have-adhd'} <= expected)
         for directory in ['.agents/skills', '.claude/skills']:
             found = {path.parent.name for path in (self.home / directory).glob('*/SKILL.md')}
             self.assertEqual(found, expected)
             for name in expected:
-                self.assertEqual((self.home / directory / name).resolve(), SKILLS / name)
+                self.assertEqual((self.home / directory / name).resolve(), sources[name])
         self.assertEqual(len(list((self.home / '.claude/agents').glob('cavecrew-*.md'))), 3)
         for relative in ['.codex/AGENTS.md', '.claude/CLAUDE.md']:
             self.assertIn('`ultracave`', (self.home / relative).read_text())
@@ -146,6 +150,7 @@ class AgentSkillsTests(unittest.TestCase):
     def test_duplicate_claude_plugins_are_disabled_without_losing_preferences(self):
         original = {
             'enabledPlugins': {'caveman@caveman': True, 'caveman@dotfiles': True,
+                               'i-have-adhd@i-have-adhd': True,
                                'personal@local': True, 'caveman@personal': True},
             'editorMode': 'vim',
             'permissions': {'allow': ['Read'], 'deny': ['Bash(rm:*)']},
@@ -153,7 +158,8 @@ class AgentSkillsTests(unittest.TestCase):
         path = self.put('.claude/settings.json', json.dumps(original) + '\n')
         self.apply()
         expected = dict(original, enabledPlugins=dict(original['enabledPlugins'],
-                        **{'caveman@caveman': False, 'caveman@dotfiles': False}))
+                        **{'caveman@caveman': False, 'caveman@dotfiles': False,
+                           'i-have-adhd@i-have-adhd': False}))
         self.assertEqual(json.loads(path.read_text()), expected)
         before = path.read_bytes(), path.stat().st_mtime_ns
         self.apply()
@@ -185,9 +191,36 @@ class AgentSkillsTests(unittest.TestCase):
         self.assertEqual(len(backups), 1)
         self.assertEqual(os.readlink(backups[0]), str(self.home / 'missing-original'))
         self.assertEqual(unrelated.read_text(), 'personal skill')
-        self.assertEqual(len(list((self.home / '.agents/skills').glob('*/SKILL.md'))), 23)
+        self.assertEqual(len(list((self.home / '.agents/skills').glob('*/SKILL.md'))), 24)
         self.apply()
         self.assertEqual(len(list((backup_root / 'claude-skills').glob('caveman-review.bak.*'))), 1)
+
+    def fake_sources(self, caveman, adhd):
+        root = self.home / 'sources'
+        for source, names in (('caveman', caveman), ('i-have-adhd', adhd)):
+            for name in names:
+                skill = root / source / 'skills' / name / 'SKILL.md'
+                skill.parent.mkdir(parents=True)
+                skill.write_text(f'---\nname: {name}\n---\n')
+        (root / 'CAVEMAN.md').write_text('# Caveman defaults\n')
+        shutil.copy2(SCRIPT, root / 'apply.py')
+        return root / 'apply.py'
+
+    def test_invalid_skill_sources_fail_before_installation(self):
+        cases = [('missing-caveman', [], ['i-have-adhd'], 'shared caveman skill sources are missing'),
+                 ('missing-adhd', ['caveman'], [], 'shared i-have-adhd skill sources are missing'),
+                 ('name-clash', ['caveman', 'shared'], ['shared'],
+                  'skill names shared by several sources: shared')]
+        for label, caveman, adhd, error in cases:
+            with self.subTest(label=label):
+                self.home = Path(self.temp.name) / label
+                script = self.fake_sources(caveman, adhd)
+                result = subprocess.run([sys.executable, str(script), '--home', str(self.home)],
+                                        capture_output=True, text=True, timeout=10)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(error, result.stderr)
+                self.assertFalse((self.home / '.agents').exists())
+                self.assertFalse((self.home / '.claude').exists())
 
     def test_invalid_user_files_fail_before_installation(self):
         cases = [('invalid-json', '.config/caveman/config.json', '{'),

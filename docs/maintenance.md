@@ -5,7 +5,7 @@
 Pull repository changes, initialize the submodules you use, preview the selected
 profile, then apply it. Submodules stay at the revisions recorded by the parent
 repository; `git pull` alone does not update an initialized submodule checkout.
-The full check suite requires both submodules, including Caveman when installing
+The full check suite requires all submodules, including the agent skills when installing
 only the core profile. It reports the initialization command if a source is missing.
 
 ```sh

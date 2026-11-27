@@ -5,3 +5,6 @@
 [submodule "agent-skills/caveman"]
 	path = agent-skills/caveman
 	url = https://github.com/JuliusBrussee/caveman.git
+[submodule "agent-skills/i-have-adhd"]
+	path = agent-skills/i-have-adhd
+	url = https://github.com/ayghri/i-have-adhd.git

@@ -72,6 +72,7 @@ enabled = true
         self.assertFalse(result['plugins']['caveman@caveman']['enabled'])
         self.assertEqual(result['plugins']['caveman@caveman']['custom'], 'keep this setting')
         self.assertFalse(result['plugins']['caveman@dotfiles']['enabled'])
+        self.assertFalse(result['plugins']['i-have-adhd@i-have-adhd']['enabled'])
         self.assertEqual(result['personality'], 'pragmatic')
         self.assertTrue(result['tui']['vim_mode_default'])
         self.assertEqual(result['mcp_servers']['openaiDeveloperDocs']['url'],

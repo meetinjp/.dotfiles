@@ -49,9 +49,10 @@ DESIRED = {
     "mcp_servers.openaiDeveloperDocs": {
         "url": '"https://developers.openai.com/mcp"',
     },
-    # Shared Caveman skills are installed from one pinned upstream source.
+    # Shared skills are installed from pinned upstream submodules instead.
     "plugins.caveman@dotfiles": {"enabled": "false"},
     "plugins.caveman@caveman": {"enabled": "false"},
+    "plugins.i-have-adhd@i-have-adhd": {"enabled": "false"},
 }
 
 path = Path(os.environ["CODEX_DOTFILES_CONFIG_PATH"])

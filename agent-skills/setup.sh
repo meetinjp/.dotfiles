@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Optional shared agent configuration. One pinned source supplies both hosts.
+# Optional shared agent configuration. Pinned sources supply both hosts.
 set -euo pipefail
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
@@ -8,7 +8,7 @@ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
 	exit 0
 fi
 [[ $# == 0 ]] || { echo "Unexpected argument: $1" >&2; exit 2; }
-git -C "$DOTFILES" submodule update --init agent-skills/caveman
+git -C "$DOTFILES" submodule update --init agent-skills/caveman agent-skills/i-have-adhd
 python3 "$DOTFILES/agent-skills/apply.py" --check
 "$DOTFILES/codex/apply.sh"
 python3 "$DOTFILES/agent-skills/apply.py"

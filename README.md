@@ -74,12 +74,12 @@ Existing hardware drivers, display managers, and power policy remain OS-owned.
 
 ## Maintain
 
-For checks, initialize both submodules with `git submodule update --init --recursive`,
+For checks, initialize all submodules with `git submodule update --init --recursive`,
 then run `./scripts/check.sh` before committing. CI runs shell checks and isolated
 Python integration tests; it does not provision a complete desktop. See
 [maintenance](docs/maintenance.md) for updates, conflicts, and machine-local data.
 
-Neovim and Caveman are pinned upstream submodules. Initialize only the modules
-you use, or run `git submodule update --init --recursive` for both.
+Neovim, Caveman, and i-have-adhd are pinned upstream submodules. Initialize only
+the modules you use, or run `git submodule update --init --recursive` for all.
 
 [MIT license](LICENSE). Third-party submodules retain their own licenses.

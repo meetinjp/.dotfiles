@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the shared Caveman skills and reconcile their global defaults."""
+"""Install the shared agent skills and reconcile the Caveman global defaults."""
 
 import argparse
 import json
@@ -13,6 +13,8 @@ import uuid
 
 
 ROOT = Path(__file__).resolve().parent
+# Pinned upstream submodules whose skills are linked into both hosts.
+SOURCES = ('caveman', 'i-have-adhd')
 START = '<!-- dotfiles:caveman:start -->'
 END = '<!-- dotfiles:caveman:end -->'
 GUIDANCE = f'''{START}
@@ -92,10 +94,19 @@ def main():
         elif sys.platform == 'win32':
             config = Path(os.environ.get('APPDATA') or home / 'AppData/Roaming')
 
-    skills = sorted((ROOT / 'caveman/skills').glob('*/SKILL.md'))
+    skills = []
+    for source in SOURCES:
+        found = sorted((ROOT / source / 'skills').glob('*/SKILL.md'))
+        if not found:
+            raise ValueError(f'shared {source} skill sources are missing')
+        skills += found
+    names = [skill.parent.name for skill in skills]
+    clashes = sorted({name for name in names if names.count(name) > 1})
+    if clashes:
+        raise ValueError(f'skill names shared by several sources: {", ".join(clashes)}')
     agents = sorted((ROOT / 'caveman/agents').glob('cavecrew-*.md'))
-    if not skills or not (ROOT / 'CAVEMAN.md').is_file():
-        raise ValueError('shared Caveman skill sources are missing')
+    if not (ROOT / 'CAVEMAN.md').is_file():
+        raise ValueError('agent-skills/CAVEMAN.md is missing')
 
     # Validate existing user files before making any changes.
     guidance = {}
@@ -116,13 +127,13 @@ def main():
     plugins = claude_settings.get('enabledPlugins', {})
     if not isinstance(plugins, dict):
         raise ValueError(f'{claude_settings_path}: enabledPlugins must contain a JSON object')
-    duplicates = [name for name in ('caveman@caveman', 'caveman@dotfiles')
+    duplicates = [name for name in ('caveman@caveman', 'caveman@dotfiles', 'i-have-adhd@i-have-adhd')
                   if name in plugins and plugins[name] is not False]
     for name in duplicates:
         plugins[name] = False
 
     if args.check:
-        print('Caveman sources and existing user files are valid.')
+        print('Shared skill sources and existing user files are valid.')
         return
 
     linked = 0
@@ -141,7 +152,7 @@ def main():
     if duplicates:
         write_text(claude_settings_path, json.dumps(claude_settings, indent=2) + '\n')
         print(f'Disabled duplicate Claude plugins: {", ".join(duplicates)}.')
-    print(f'Caveman: {len(skills)} shared skills per host, {linked} links updated; default ultracave.')
+    print(f'Agent skills: {len(skills)} shared skills per host, {linked} links updated; default ultracave.')
 
 
 if __name__ == '__main__':
